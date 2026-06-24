@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🖋️ Trustux
+<img src="public/logo.svg" width="76" alt="Trustux" />
+
+# Trustux
 
 **Cada firma, verificada. En tu máquina.**
 
@@ -14,7 +16,7 @@ Parte de la familia [**Escriba**](https://github.com/diegoparras/escriba). Nace 
 verificador de firma de [Selega](https://github.com/diegoparras/selega) —cierra el lazo de la
 legalización: *cifras que cierran **y** firma del matriculado verificada*— y crece a app standalone.
 
-![Local](https://img.shields.io/badge/local-100%25-7c3aed) ![Self-hosted](https://img.shields.io/badge/self--hosted-✓-7c3aed) ![Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-7c3aed)
+![Local](https://img.shields.io/badge/local-100%25-0E9AAB) ![Self-hosted](https://img.shields.io/badge/self--hosted-✓-0E9AAB) ![Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-0E9AAB)
 
 > Estado: **Fase 1 — motor PAdES funcionando.** `firma-core` verifica integridad, identidad
 > (CUIT) y cadena de confianza sobre PDFs firmados, con tests verdes contra los fixtures. Falta

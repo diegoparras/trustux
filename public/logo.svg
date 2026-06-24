@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Trustux">
+  <rect width="64" height="64" rx="15" fill="#0E9AAB"/>
+  <rect x="15" y="15" width="34" height="34" rx="6" fill="#fff"/>
+  <rect x="15" y="15" width="34" height="34" rx="6" fill="#fff" transform="rotate(45 32 32)"/>
+  <circle cx="32" cy="32" r="13" fill="#0E9AAB"/>
+  <path d="M25 33 l4.5 4.5 l9 -12" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
