@@ -1,4 +1,8 @@
-# Los PDFs firmados son binarios: NUNCA normalizar saltos de línea (corrompería la firma).
+# Fixtures de firma binarios: NUNCA normalizar saltos de línea (corrompería la firma).
 *.pdf binary
 *.p12 binary
 *.pfx binary
+*.p7m binary
+*.p7s binary
+*.der binary
+*.crl binary
