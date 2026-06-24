@@ -6,7 +6,10 @@ import { fileURLToPath } from "node:url";
 import { verificar, cargarCert, cargarCRL } from "./verify.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SEM = { valida: "🟢 válida", observada: "🟡 observada", invalida: "🔴 inválida", "sin-firma": "⚪ sin firma" };
+// Color en terminal (ANSI), sin emojis: verde=válida, amarillo=observada, rojo=inválida.
+const C = { g: "\x1b[32m", y: "\x1b[33m", r: "\x1b[31m", d: "\x1b[90m", x: "\x1b[0m" };
+const SEM = { valida: `${C.g}válida${C.x}`, observada: `${C.y}observada${C.x}`,
+              invalida: `${C.r}inválida${C.x}`, "sin-firma": `${C.d}sin firma${C.x}` };
 
 const TRUST = join(ROOT, "fixtures/trust");
 const trustRoots = readdirSync(TRUST).filter((f) => /\.(pem|crt|cer)$/i.test(f))

@@ -22,7 +22,7 @@ firmado y responde, **100% local**, tres preguntas:
 2. **Identidad** — ¿el firmante es quien dice? (cadena hasta AC Raíz Argentina; extracción de CUIT/CUIL)
 3. **Vigencia** — ¿el certificado estaba válido al firmar? (revocación + sello de tiempo)
 
-Entrega un **veredicto con semáforo** (🟢 válida / 🟡 con observaciones / 🔴 inválida), idéntico
+Entrega un **veredicto con semáforo** (válida / con observaciones / inválida), idéntico
 al lenguaje visual de Selega, más un **informe de verificación exportable**.
 
 **Estrategia de entrega:** se construye como un **módulo de Selega** (`firma-core/` sin
@@ -35,9 +35,9 @@ luego como app standalone **Trustux** (mismo stack: Node ESM + vanilla HTTP, com
 
 | Estándar | Contenedor | Caso de uso en el ecosistema | Fase |
 |----------|-----------|------------------------------|------|
-| **PAdES** | PDF | Balances, dictámenes, escritos firmados (el 90% de Selega) | **MVP** |
-| **XAdES** | XML | Facturas electrónicas AFIP/ARCA, comprobantes | 2 |
-| **CAdES** | `.p7s` / `.p7m` | Firmas desprendidas, adjuntos firmados | 2 |
+| **PAdES** | PDF | Balances, dictámenes, escritos firmados (el 90% de Selega) | **listo** |
+| **XAdES** | XML | Facturas electrónicas AFIP/ARCA, comprobantes | **listo** |
+| **CAdES** | `.p7s` / `.p7m` | Firmas desprendidas, adjuntos firmados | pendiente |
 
 Niveles de firma reconocidos (perfil baseline ETSI): **-B** (básica), **-T** (con sello de
 tiempo), **-LT** (long-term, revocación embebida → **valida 100% offline**), **-LTA** (con
@@ -112,12 +112,12 @@ Cada **firma** del documento (puede haber varias) produce:
 
 **Reglas de semáforo (alineadas con Selega):**
 
-- 🔴 **inválida** — falla integridad, cadena no llega a raíz confiable, certificado revocado,
+- **inválida** — falla integridad, cadena no llega a raíz confiable, certificado revocado,
   o algoritmo prohibido (MD5/SHA-1 en la firma).
-- 🟡 **observada** — íntegra y de firmante confiable, pero con caveat: sin sello de tiempo,
+- **observada** — íntegra y de firmante confiable, pero con caveat: sin sello de tiempo,
   revocación no verificable offline y sin LTV, o cadena válida contra raíz **no precargada**
   (root custom agregado por el admin).
-- 🟢 **válida** — integridad ✓ + cadena a raíz confiable ✓ + revocación ✓ + (idealmente) sello ✓.
+- **válida** — integridad correcta, cadena a una raíz confiable, revocación OK y (idealmente) sello de tiempo.
 
 **Veredicto global** del documento = la peor firma + reglas de la jurisdicción.
 
@@ -127,10 +127,10 @@ El veredicto de Trustux alimenta el campo `desenlace` existente de Selega:
 
 | Firma (Trustux) | Cruces EECC (Selega) | Desenlace sugerido |
 |-----------------|----------------------|--------------------|
-| 🟢 válida | 14/14 cierran | **legaliza** |
-| 🟢 válida | algún cruce ámbar | **observa** |
-| 🟡 observada | cierran | **certifica firma** (con caveat) |
-| 🔴 inválida | — | **deniega** |
+| válida | 14/14 cierran | **legaliza** |
+| válida | algún cruce ámbar | **observa** |
+| observada | cierran | **certifica firma** (con caveat) |
+| inválida | — | **deniega** |
 
 Esto convierte a Selega de "control visual de cifras" a **legalización con respaldo
 criptográfico**: cifra correcta **y** firma del matriculado verificada.
@@ -210,7 +210,7 @@ Los ataques clásicos a firma PAdES se mitigan explícitamente:
   salvo el hueco de la firma; rechazar contenido después de la última firma; detectar
   **actualizaciones incrementales** post-firma y reportarlas (no silenciarlas).
 - **Algoritmos débiles** — allowlist: SHA-256/384/512 + RSA-2048+/ECDSA-P256+. MD5 y SHA-1 en el
-  digest de firma → 🔴 inválida.
+  digest de firma → inválida.
 - **Confusión de identidad** — el "nombre" mostrado sale **del certificado**, nunca de metadata del
   PDF; CUIT desde el OID `serialNumber`, no de texto libre.
 - **DoS** — reusar el cap de 30 MB de Selega; límites de profundidad de cadena y de nº de firmas.
@@ -230,7 +230,7 @@ Los ataques clásicos a firma PAdES se mitigan explícitamente:
 - [ ] Pestaña "Firma" en el trabajo + informe exportable.
 
 **Difiere a Fase 2+:**
-- XAdES (facturas AFIP/ARCA) y CAdES (`.p7s`).
+- CAdES (`.p7s`) y OCSP online (proxy gateado). *(XAdES ya implementado: `firma-core/xades.js`.)*
 - Validación por lote (carpeta → informe único).
 - Extracción a app standalone **Trustux** (mismo stack que Selega).
 - **Firmar** (no solo validar): `.pfx` PKCS#12 y tokens USB PKCS#11 — lo más OS-dependiente, va al final.

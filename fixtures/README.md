@@ -4,20 +4,20 @@ PDFs firmados digitalmente para probar el motor de verificación de Trustux. Gen
 forma reproducible por [`scripts/gen_fixtures.py`](../scripts/gen_fixtures.py) con una PKI de
 prueba de dos niveles (Root CA → firmantes).
 
-> ⚠️ **Sin valor legal.** Los certificados son self-signed de juguete. La raíz de prueba está
+> **Sin valor legal.** Los certificados son self-signed de juguete. La raíz de prueba está
 > en [`trust/test-root-ca.pem`](trust/test-root-ca.pem): cargala en el trust store para ver el
-> camino verde; sin ella, las firmas son íntegras pero de raíz **no confiable** (🟡).
+> camino verde; sin ella, las firmas son íntegras pero de raíz **no confiable** (observada).
 
 ## Tabla de verdad (lo que el motor debe responder)
 
 | Archivo | Firmas | Integridad | Cadena (con root de prueba) | Sello | Veredicto esperado |
 |---------|:------:|:----------:|:---------------------------:|:-----:|--------------------|
-| `01-firmado-integro.pdf` | 1 | ✅ íntegra | ✅ confiable | — | 🟢 **válida** |
-| `02-firmado-alterado.pdf` | 1 | ❌ **rota** | (irrelevante) | — | 🔴 **inválida** |
-| `03-doble-firma.pdf` | 2 | ✅ ✅ | ✅ ✅ | — | 🟢 🟢 (contador + síndico) |
-| `04-firmado-con-sello.pdf` | 1 | ✅ íntegra | ✅ confiable | ✅ TSA | 🟢 **con sello** (TSA no confiable offline → 🟡 si se exige cadena de la TSA) |
-| `05-firma-sha1.pdf` | 1 | ⚠️ digest SHA-1 | ✅ confiable | — | 🔴 **inválida** (algoritmo de digest inseguro) |
-| `06-firmado-revocado.pdf` | 1 | ✅ íntegra | ✅ confiable | — | 🔴 **inválida** (certificado revocado en la CRL) |
+| `01-firmado-integro.pdf` | 1 | íntegra | confiable | — | **válida** |
+| `02-firmado-alterado.pdf` | 1 | **rota** | (irrelevante) | — | **inválida** |
+| `03-doble-firma.pdf` | 2 | ambas íntegras | ambas confiables | — | **válida + válida** (contador + síndico) |
+| `04-firmado-con-sello.pdf` | 1 | íntegra | confiable | TSA | **con sello** (TSA no confiable offline → observada si se exige la cadena de la TSA) |
+| `05-firma-sha1.pdf` | 1 | digest SHA-1 | confiable | — | **inválida** (algoritmo de digest inseguro) |
+| `06-firmado-revocado.pdf` | 1 | íntegra | confiable | — | **inválida** (certificado revocado en la CRL) |
 
 > El trust store incluye `trust/test.crl`, una lista de revocación firmada por la raíz de prueba
 > que revoca el certificado de LOPEZ (el firmante del `06`). El resto de los certificados figura
@@ -26,7 +26,7 @@ prueba de dos niveles (Root CA → firmantes).
 ## Detalle de cada caso
 
 - **01 — íntegro.** Firma única del contador *PEREZ, Juan Carlos* (`CUIT 20-12345678-9`). El
-  caso feliz: integridad ✓, cadena a la raíz de prueba ✓, cubre todo el archivo.
+  caso feliz: integridad correcta, cadena a la raíz de prueba, cubre todo el archivo.
 
 - **02 — alterado.** Es el `01` con el **TOTAL ACTIVO cambiado de `1.000.000` a `9.000.000`
   después de firmar** (misma cantidad de bytes, para no correr offsets). El digest de la firma
@@ -40,15 +40,15 @@ prueba de dos niveles (Root CA → firmantes).
 
 - **04 — con sello de tiempo.** Firma del contador con **sello de tiempo RFC 3161 (PAdES-T)**
   de una TSA pública. La firma es válida y confiable; la cadena del **sello** no se valida offline
-  porque la raíz de la TSA no está en el trust store — buen caso para la regla 🟡 "sello presente,
+  porque la raíz de la TSA no está en el trust store — buen caso para la regla "sello presente,
   TSA no verificable sin red".
 
 - **05 — SHA-1.** Firma íntegra y de cadena confiable, pero hecha con **digest SHA-1** (roto por
-  colisiones). El motor la marca 🔴 **inválida** aunque "cierre": un algoritmo inseguro no da
+  colisiones). El motor la marca **inválida** aunque "cierre": un algoritmo inseguro no da
   garantía de integridad. Prueba el allowlist de algoritmos.
 
 - **06 — revocado.** Firma íntegra, cadena a la raíz confiable… pero el certificado del firmante
-  (LOPEZ) está **revocado** en `trust/test.crl`. El motor la marca 🔴 **inválida**. Prueba la
+  (LOPEZ) está **revocado** en `trust/test.crl`. El motor la marca **inválida**. Prueba la
   revocación **offline** (sin red): la CRL viene del trust store, como la traería un PAdES-LT
   embebida.
 

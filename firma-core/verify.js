@@ -2,7 +2,8 @@
 //
 // Por cada firma del PDF responde: integridad (¿se modificó tras firmar?), identidad
 // del firmante (nombre, CUIT, AC), cadena hasta una raíz de confianza, y un veredicto
-// con semáforo 🟢🟡🔴. Sin red: todo se resuelve con el documento y el trust store.
+// con semáforo (válida / observada / inválida). Sin red: todo se resuelve con el
+// documento y el trust store.
 //
 // Funciona igual en Node y en el browser (mismo pkijs). Acá el engine se cablea con la
 // WebCrypto de Node; en el browser, pkijs toma `globalThis.crypto` solo.
@@ -57,6 +58,30 @@ export function cargarCRL(pemOrDer) {
     der = Buffer.from(b64, "base64");
   }
   return CertificateRevocationList.fromBER(toAB(Buffer.from(der)));
+}
+
+/** Identidad del firmante a partir del certificado (compartida por los motores PAdES y XAdES). */
+export function identidadDe(cert) {
+  const get = (oid) => {
+    const tv = cert.subject.typesAndValues.find((t) => t.type === oid);
+    return tv ? tv.value.valueBlock.value : null;
+  };
+  return {
+    nombre: get(OID.CN),
+    cuit: (get(OID.SERIAL) || "").replace(/^CUIT\s*/i, "") || null,
+    rol: get(OID.OU),
+    organizacion: get(OID.O),
+  };
+}
+
+/** Valida una cadena de certificados hasta una raíz de confianza (compartida PAdES/XAdES). */
+export async function validarCadena(certs, trustRoots = []) {
+  initEngine();
+  if (!certs.length || !trustRoots.length) return { ok: false, confiable: false, raiz: null };
+  const engine = new CertificateChainValidationEngine({ certs, trustedCerts: trustRoots });
+  const res = await engine.verify();
+  const confiable = !!res.result;
+  return { ok: confiable, confiable, raiz: confiable ? nombreRaiz(res) : null };
 }
 
 // Revocación OFFLINE: ¿el serial del firmante figura en alguna CRL de su emisor?
