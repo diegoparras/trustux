@@ -135,10 +135,10 @@ def base_pdf() -> bytes:
     return buf.getvalue()
 
 
-def sign(pdf_bytes: bytes, field: str, signer, *, box, reason, timestamper=None) -> bytes:
+def sign(pdf_bytes: bytes, field: str, signer, *, box, reason, timestamper=None, md="sha256") -> bytes:
     w = IncrementalPdfFileWriter(io.BytesIO(pdf_bytes))
     fields.append_signature_field(w, fields.SigFieldSpec(sig_field_name=field, box=box))
-    meta = signers.PdfSignatureMetadata(field_name=field, reason=reason, location="CABA, AR")
+    meta = signers.PdfSignatureMetadata(field_name=field, reason=reason, location="CABA, AR", md_algorithm=md)
     out = signers.sign_pdf(w, meta, signer=signer, timestamper=timestamper)
     return out.getvalue()
 
@@ -188,6 +188,12 @@ def main():
         print("  04-firmado-con-sello.pdf")
     except Exception as e:  # sin red / TSA caída → se omite, los otros 3 alcanzan
         print(f"  04-firmado-con-sello.pdf  OMITIDO (sin TSA: {type(e).__name__})")
+
+    # 05 — firma con SHA-1 (algoritmo roto): el motor debe marcarla inválida aunque "cierre".
+    f05 = sign(base, "FirmaSHA1", contador,
+               box=(60, 300, 320, 360), reason="Firma con digest inseguro", md="sha1")
+    (FIX / "05-firma-sha1.pdf").write_bytes(f05)
+    print("  05-firma-sha1.pdf  (digest SHA-1 → debe dar inválida)")
 
     # limpieza de los .p12 temporales (las claves privadas no se commitean)
     for p in ("_contador.p12", "_sindico.p12"):

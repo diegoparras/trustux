@@ -43,10 +43,20 @@ await test("03 doble firma → 2 firmas válidas (contador + síndico)", async (
   assert.deepEqual(firmas.map((f) => f.firmante.cuit).sort(), ["20-12345678-9", "27-23456789-4"]);
 });
 
-await test("04 con sello → 🟢 válida e íntegra", async () => {
+await test("04 con sello → 🟢 válida, íntegra, con sello de tiempo presente", async () => {
   const { firmas, global } = await run("04-firmado-con-sello.pdf");
   assert.equal(global, "valida");
   assert.equal(firmas[0].integridad.ok, true);
+  assert.equal(firmas[0].selloTiempo.presente, true);
+  assert.equal(firmas[0].algoritmo, "SHA-256");
+});
+
+await test("05 SHA-1 → 🔴 inválida por algoritmo de digest inseguro", async () => {
+  const { firmas, global } = await run("05-firma-sha1.pdf");
+  assert.equal(global, "invalida");
+  assert.equal(firmas[0].algoritmo, "SHA-1");
+  assert.equal(firmas[0].integridad.ok, false);
+  assert.ok(firmas[0].observaciones.some((o) => /inseguro/i.test(o)));
 });
 
 await test("sin trust store → 🟡 observada (íntegra pero cadena no evaluada)", async () => {
@@ -56,4 +66,4 @@ await test("sin trust store → 🟡 observada (íntegra pero cadena no evaluada
   assert.equal(firmas[0].cadena.confiable, false);
 });
 
-console.log(`\n${ok}/5 OK`);
+console.log(`\n${ok}/6 OK`);

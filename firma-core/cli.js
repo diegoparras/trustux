@@ -23,6 +23,7 @@ for (const p of pdfs) {
     console.log(`  ${SEM[f.estado]}  ${fr.nombre || "?"}  CUIT ${fr.cuit || "?"}  [${fr.rol || "-"}]`);
     console.log(`     integridad=${f.integridad.ok}  cubreTodo=${f.integridad.cubreTodo}  cadena=${f.cadena.confiable}` +
                 (f.cadena.raiz ? `  raíz="${f.cadena.raiz}"` : ""));
+    console.log(`     algoritmo=${f.algoritmo}  firmado=${f.firmadoEl || "-"}  sello=${f.selloTiempo?.presente ? "sí" : "no"}`);
     for (const o of f.observaciones) console.log(`     · ${o}`);
   }
 }

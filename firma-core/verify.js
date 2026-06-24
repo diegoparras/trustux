@@ -23,6 +23,22 @@ function initEngine() {
 const OID = { CN: "2.5.4.3", SERIAL: "2.5.4.5", OU: "2.5.4.11", O: "2.5.4.10" };
 const hex = (u8) => Buffer.from(u8).toString("hex");
 
+// Algoritmos de digest: nombre legible + cuáles se aceptan. MD5 y SHA-1 están rotos
+// (colisiones) → una firma que los use no da garantía de integridad: la marcamos inválida.
+const DIGEST = {
+  "1.2.840.113549.2.5": "MD5", "1.3.14.3.2.26": "SHA-1",
+  "2.16.840.1.101.3.4.2.1": "SHA-256", "2.16.840.1.101.3.4.2.2": "SHA-384",
+  "2.16.840.1.101.3.4.2.3": "SHA-512",
+};
+const DIGEST_DEBIL = new Set(["MD5", "SHA-1"]);
+const OID_SIGNING_TIME = "1.2.840.113549.1.9.5";
+const OID_TIMESTAMP = "1.2.840.113549.1.9.16.2.14"; // RFC 3161 signature-time-stamp (unsigned attr)
+
+// Busca un atributo (firmado o no) del SignerInfo por OID.
+function buscarAttr(attrs, oid) {
+  return attrs?.attributes?.find((a) => a.type === oid) || null;
+}
+
 /** Carga un certificado desde PEM o DER → pkijs.Certificate. */
 export function cargarCert(pemOrDer) {
   let der = pemOrDer;
@@ -70,6 +86,13 @@ export async function verificar(pdf, { trustRoots = [] } = {}) {
       const ci = ContentInfo.fromBER(toAB(f.cms));
       const sd = new SignedData({ schema: ci.content });
       const cert = certDelFirmante(sd);
+      const si = sd.signerInfos[0];
+
+      // 0) Algoritmo de digest. Si es débil (MD5/SHA-1) la firma no garantiza integridad.
+      const digestNom = DIGEST[si?.digestAlgorithm?.algorithmId] || si?.digestAlgorithm?.algorithmId || "?";
+      v.algoritmo = digestNom;
+      const algoDebil = DIGEST_DEBIL.has(digestNom);
+      if (algoDebil) v.observaciones.push(`Algoritmo de digest inseguro: ${digestNom} (firma no confiable)`);
 
       // 1) Integridad + validez criptográfica de la firma (incluye chequeo de messageDigest).
       let intacta = false;
@@ -79,7 +102,15 @@ export async function verificar(pdf, { trustRoots = [] } = {}) {
       } catch (e) {
         v.observaciones.push(`Verificación criptográfica falló: ${e.message}`);
       }
-      v.integridad = { ok: intacta, cubreTodo: f.coversWholeFile, modificadoPostFirma: !intacta };
+      // Aunque la firma "cierre", un algoritmo roto la invalida.
+      v.integridad = { ok: intacta && !algoDebil, cubreTodo: f.coversWholeFile, modificadoPostFirma: !intacta };
+
+      // 1b) Momento declarado de firma (atributo firmado) y presencia de sello de tiempo (RFC 3161).
+      try {
+        const at = buscarAttr(si?.signedAttrs, OID_SIGNING_TIME);
+        v.firmadoEl = at ? at.values[0].toDate().toISOString() : null;
+      } catch { v.firmadoEl = null; }
+      v.selloTiempo = { presente: !!buscarAttr(si?.unsignedAttrs, OID_TIMESTAMP) };
 
       // 2) Identidad del firmante (del certificado, nunca de metadata del PDF).
       if (cert) {
@@ -112,6 +143,21 @@ export async function verificar(pdf, { trustRoots = [] } = {}) {
       v.observaciones.push(`No se pudo parsear la firma: ${e.message}`);
     }
     firmas.push(v);
+  }
+
+  // Chequeo a nivel documento: la firma más "externa" (la que llega más lejos en el archivo)
+  // debería cubrir hasta el EOF. Si no, hay bytes agregados después de toda firma → sospechoso.
+  if (firmas.length) {
+    let outIdx = 0, outEnd = -1;
+    firmas.forEach((f, i) => {
+      const end = f.provenance.byteRange[2] + f.provenance.byteRange[3];
+      if (end > outEnd) { outEnd = end; outIdx = i; }
+    });
+    const out = firmas[outIdx];
+    if (!out.integridad.cubreTodo) {
+      out.observaciones.push("Hay contenido agregado después de la última firma (posible manipulación).");
+      if (out.estado === "valida") out.estado = "observada";
+    }
   }
 
   // Veredicto global = la peor firma.

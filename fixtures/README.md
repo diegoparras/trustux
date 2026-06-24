@@ -16,6 +16,7 @@ prueba de dos niveles (Root CA → firmantes).
 | `02-firmado-alterado.pdf` | 1 | ❌ **rota** | (irrelevante) | — | 🔴 **inválida** |
 | `03-doble-firma.pdf` | 2 | ✅ ✅ | ✅ ✅ | — | 🟢 🟢 (contador + síndico) |
 | `04-firmado-con-sello.pdf` | 1 | ✅ íntegra | ✅ confiable | ✅ TSA | 🟢 **con sello** (TSA no confiable offline → 🟡 si se exige cadena de la TSA) |
+| `05-firma-sha1.pdf` | 1 | ⚠️ digest SHA-1 | ✅ confiable | — | 🔴 **inválida** (algoritmo de digest inseguro) |
 
 ## Detalle de cada caso
 
@@ -36,6 +37,10 @@ prueba de dos niveles (Root CA → firmantes).
   de una TSA pública. La firma es válida y confiable; la cadena del **sello** no se valida offline
   porque la raíz de la TSA no está en el trust store — buen caso para la regla 🟡 "sello presente,
   TSA no verificable sin red".
+
+- **05 — SHA-1.** Firma íntegra y de cadena confiable, pero hecha con **digest SHA-1** (roto por
+  colisiones). El motor la marca 🔴 **inválida** aunque "cierre": un algoritmo inseguro no da
+  garantía de integridad. Prueba el allowlist de algoritmos.
 
 ## Regenerar
 
