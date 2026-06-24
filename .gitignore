@@ -1,0 +1,20 @@
+# Claves privadas de prueba (se generan al vuelo, NUNCA se commitean)
+*.p12
+*.pfx
+*.key
+scripts/_*.p12
+
+# Node / build
+node_modules/
+dist/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db

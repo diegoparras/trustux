@@ -1,0 +1,4 @@
+# Solo para generar/validar los fixtures de prueba (no es runtime de Rubrica).
+pyHanko[opentype]>=0.25
+reportlab>=4.0
+cryptography>=42.0
