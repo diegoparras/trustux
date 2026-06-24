@@ -1,0 +1,16 @@
+{
+  "name": "trustux",
+  "version": "0.1.0",
+  "description": "Trustux — verificación de firma digital 100% local (PAdES). Parte de la Suite Escriba.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "verificar": "node firma-core/cli.js",
+    "test": "node test/test-core.mjs"
+  },
+  "dependencies": {
+    "asn1js": "^3.0.10",
+    "pkijs": "^3.4.0",
+    "pvutils": "^1.1.5"
+  }
+}

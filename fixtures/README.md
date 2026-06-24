@@ -1,6 +1,6 @@
 # Fixtures de prueba — PDFs firmados
 
-PDFs firmados digitalmente para probar el motor de verificación de Rubrica. Generados de
+PDFs firmados digitalmente para probar el motor de verificación de Trustux. Generados de
 forma reproducible por [`scripts/gen_fixtures.py`](../scripts/gen_fixtures.py) con una PKI de
 prueba de dos niveles (Root CA → firmantes).
 

@@ -1,4 +1,4 @@
-# Rubrica — Verificación de firma digital para la Suite Escriba
+# Trustux — Verificación de firma digital para la Suite Escriba
 
 **Spec técnica + MVP · 2026-06-23**
 **Enfoque: integración con Selega primero; app standalone después.**
@@ -15,7 +15,7 @@ validador online (subiendo un documento legal sensible a un tercero — justo lo
 predica no hacer). Selega ya contempla `"certifica firma"` como uno de sus desenlaces posibles;
 esta spec lo implementa.
 
-**Rubrica** es el motor de verificación de firma digital de la suite. Recibe un documento
+**Trustux** es el motor de verificación de firma digital de la suite. Recibe un documento
 firmado y responde, **100% local**, tres preguntas:
 
 1. **Integridad** — ¿el documento se modificó después de firmarse?
@@ -27,7 +27,7 @@ al lenguaje visual de Selega, más un **informe de verificación exportable**.
 
 **Estrategia de entrega:** se construye como un **módulo de Selega** (`firma-core/` sin
 dependencias de Selega + panel cliente + endpoints), con una costura limpia para extraerlo
-luego como app standalone **Rubrica** (mismo stack: Node ESM + vanilla HTTP, como Selega/Fulgoria).
+luego como app standalone **Trustux** (mismo stack: Node ESM + vanilla HTTP, como Selega/Fulgoria).
 
 ---
 
@@ -41,7 +41,7 @@ luego como app standalone **Rubrica** (mismo stack: Node ESM + vanilla HTTP, com
 
 Niveles de firma reconocidos (perfil baseline ETSI): **-B** (básica), **-T** (con sello de
 tiempo), **-LT** (long-term, revocación embebida → **valida 100% offline**), **-LTA** (con
-sello de archivo). Rubrica detecta y reporta el nivel; los `-LT/-LTA` son los que validan sin red.
+sello de archivo). Trustux detecta y reporta el nivel; los `-LT/-LTA` son los que validan sin red.
 
 ---
 
@@ -123,9 +123,9 @@ Cada **firma** del documento (puede haber varias) produce:
 
 ### 3.1 Mapeo al desenlace de Selega
 
-El veredicto de Rubrica alimenta el campo `desenlace` existente de Selega:
+El veredicto de Trustux alimenta el campo `desenlace` existente de Selega:
 
-| Firma (Rubrica) | Cruces EECC (Selega) | Desenlace sugerido |
+| Firma (Trustux) | Cruces EECC (Selega) | Desenlace sugerido |
 |-----------------|----------------------|--------------------|
 | 🟢 válida | 14/14 cierran | **legaliza** |
 | 🟢 válida | algún cruce ámbar | **observa** |
@@ -232,7 +232,7 @@ Los ataques clásicos a firma PAdES se mitigan explícitamente:
 **Difiere a Fase 2+:**
 - XAdES (facturas AFIP/ARCA) y CAdES (`.p7s`).
 - Validación por lote (carpeta → informe único).
-- Extracción a app standalone **Rubrica** (mismo stack que Selega).
+- Extracción a app standalone **Trustux** (mismo stack que Selega).
 - **Firmar** (no solo validar): `.pfx` PKCS#12 y tokens USB PKCS#11 — lo más OS-dependiente, va al final.
 
 ---
@@ -241,7 +241,7 @@ Los ataques clásicos a firma PAdES se mitigan explícitamente:
 
 `firma-core/` no importa **nada** de Selega (ni db, ni auth, ni config). Su contrato:
 `verificar(bytes, opts) -> veredicto`. Selega lo consume desde su cliente/servidor; la futura
-app **Rubrica** lo monta sobre un `server/index.js` clónico (vanilla HTTP + el mismo CSP estricto)
+app **Trustux** lo monta sobre un `server/index.js` clónico (vanilla HTTP + el mismo CSP estricto)
 y agrega: drag-and-drop multi-archivo, validación por lote, los tres estándares, y firma con token.
 Cero reescritura del core.
 
@@ -254,7 +254,7 @@ Cero reescritura del core.
 | ¿Core en browser o server? | **Browser** por privacidad; server solo para proxy de revocación. |
 | ¿OCSP online rompe `connect-src 'self'`? | Sí → **proxy server-side gateado** (patrón del proxy LLM). Offline por defecto. |
 | Trust store: ¿hardcode o editable? | **Editable por jurisdicción** (patrón `packs`/`rules`). |
-| Nombre del producto | **Rubrica** (alt: *Vidimus*, *Sigilo*). |
+| Nombre del producto | **Trustux** (decidido). |
 | ¿Empezar embebido en Selega o standalone? | **Embebido** (esta spec); standalone reusa `firma-core`. |
 | ¿Quién decide si Selega usa firma? | **Superadmin**, vía cap `cap_firma` — **apagado por defecto**. Off = Selega idéntico a hoy. |
 

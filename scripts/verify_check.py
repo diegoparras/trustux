@@ -10,7 +10,7 @@ from asn1crypto import pem, x509
 ROOT = Path(__file__).resolve().parent.parent
 FIX = ROOT / "fixtures"
 
-# Trust store = solo la root de prueba (como haría el admin al cargarla en Rubrica).
+# Trust store = solo la root de prueba (como haría el admin al cargarla en Trustux).
 der = FIX / "trust" / "test-root-ca.pem"
 data = der.read_bytes()
 if pem.detect(data):

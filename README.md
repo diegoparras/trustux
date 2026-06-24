@@ -1,11 +1,11 @@
 <div align="center">
 
-# 🖋️ Rubrica
+# 🖋️ Trustux
 
 **Cada firma, verificada. En tu máquina.**
 
 Verificación de firma digital **100% local** para documentos firmados (PDF/PAdES). Subís un
-balance, un dictamen o un escrito firmado y Rubrica responde — sin que el documento salga de tu
+balance, un dictamen o un escrito firmado y Trustux responde — sin que el documento salga de tu
 equipo — si la firma es **íntegra** (¿se modificó después de firmar?), si el firmante es **quien
 dice ser** (cadena hasta la AC Raíz Argentina, con extracción de CUIT/CUIL) y si el certificado
 estaba **vigente** al firmar. Veredicto con semáforo 🟢🟡🔴 e informe exportable.
@@ -16,8 +16,9 @@ legalización: *cifras que cierran **y** firma del matriculado verificada*— y 
 
 ![Local](https://img.shields.io/badge/local-100%25-7c3aed) ![Self-hosted](https://img.shields.io/badge/self--hosted-✓-7c3aed) ![Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-7c3aed)
 
-> Estado: **Fase 0 — spec + fixtures.** El motor (`firma-core`) y la integración con Selega
-> vienen a continuación. Ver [`docs/SPEC.md`](docs/SPEC.md).
+> Estado: **Fase 1 — motor PAdES funcionando.** `firma-core` verifica integridad, identidad
+> (CUIT) y cadena de confianza sobre PDFs firmados, con tests verdes contra los fixtures. Falta
+> revocación online (gateada), XAdES/CAdES y la integración con Selega. Ver [`docs/SPEC.md`](docs/SPEC.md).
 
 </div>
 
@@ -26,7 +27,7 @@ legalización: *cifras que cierran **y** firma del matriculado verificada*— y 
 ## Por qué
 
 Los validadores de firma habituales son **online**: subís un documento legal sensible a un
-tercero que *promete* no guardarlo. Rubrica corre **en tu máquina** — el documento nunca sale,
+tercero que *promete* no guardarlo. Trustux corre **en tu máquina** — el documento nunca sale,
 igual que [Anonimal](https://github.com/diegoparras/anonimal) con los datos personales. Para una
 Secretaría Técnica que recibe balances firmados, eso no es comodidad: es la diferencia entre
 poder usar la herramienta y no poder.
@@ -62,11 +63,24 @@ python scripts/verify_check.py     # los valida con pyHanko (verificador de refe
 ## Estructura
 
 ```
-rubrica/
+trustux/
+├── firma-core/           motor de verificación (JS puro, browser + Node)
+│   ├── pades.js          extrae firmas del PDF (ByteRange + CMS)
+│   ├── verify.js         integridad · identidad (CUIT) · cadena · veredicto
+│   └── cli.js            verifica fixtures/ por consola
+├── test/test-core.mjs    tabla de verdad como contrato (npm test)
 ├── docs/SPEC.md          spec técnica + alcance del MVP
 ├── fixtures/             PDFs firmados de ejemplo + trust/ (raíz de prueba)
 │   └── README.md         tabla de verdad (veredicto esperado de cada PDF)
 └── scripts/              generador y validador de fixtures (Python, solo dev)
+```
+
+## Probar el motor
+
+```bash
+npm install
+npm run verificar      # verifica los PDFs de fixtures/ y muestra el veredicto
+npm test               # corre la tabla de verdad (5/5)
 ```
 
 ## Licencia

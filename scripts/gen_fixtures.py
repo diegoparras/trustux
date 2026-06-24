@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gen_fixtures.py — Genera PDFs firmados de ejemplo para probar `firma-core` de Rubrica.
+gen_fixtures.py — Genera PDFs firmados de ejemplo para probar `firma-core` de Trustux.
 
 Construye una PKI de prueba de dos niveles (Root CA → firmantes) y produce cuatro
 casos que cubren los veredictos del motor:
@@ -55,7 +55,7 @@ def _key():
     return rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
 
-def _name(cn, *, cuit=None, org="Rubrica TEST", ou=None):
+def _name(cn, *, cuit=None, org="Trustux TEST", ou=None):
     parts = [
         x509.NameAttribute(NameOID.COUNTRY_NAME, "AR"),
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, org),
@@ -71,7 +71,7 @@ def _name(cn, *, cuit=None, org="Rubrica TEST", ou=None):
 
 def make_root():
     key = _key()
-    subj = _name("AC Raiz Rubrica TEST - NO USAR EN PRODUCCION", org="Suite Escriba (TEST)")
+    subj = _name("AC Raiz Trustux TEST - NO USAR EN PRODUCCION", org="Suite Escriba (TEST)")
     cert = (
         x509.CertificateBuilder()
         .subject_name(subj).issuer_name(subj)
@@ -129,7 +129,7 @@ def base_pdf() -> bytes:
     c.setFont("Helvetica-Bold", 13)
     c.drawString(60, 670, "TOTAL ACTIVO: " + SALDO_OK.decode())
     c.setFont("Helvetica", 9)
-    c.drawString(60, 120, "Documento de prueba de Rubrica - sin valor legal.")
+    c.drawString(60, 120, "Documento de prueba de Trustux - sin valor legal.")
     c.showPage()
     c.save()
     return buf.getvalue()
