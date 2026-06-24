@@ -12,6 +12,7 @@ import { ContentInfo, SignedData, Certificate, CertificateRevocationList,
          CertificateChainValidationEngine, setEngine, CryptoEngine } from "pkijs";
 import { webcrypto } from "node:crypto";
 import { extraerFirmas, toAB } from "./pades.js";
+import { validarRespuestaOCSP, consultarOCSPOnline } from "./ocsp.js";
 
 let _engineListo = false;
 export function initEngine() {
@@ -141,7 +142,7 @@ export function certDelFirmante(sd) {
  * @param {{trustRoots?: Certificate[]}} opts
  * @returns {Promise<{firmas: object[], global: string}>}
  */
-export async function verificar(pdf, { trustRoots = [], crls = [] } = {}) {
+export async function verificar(pdf, { trustRoots = [], crls = [], ocsps = [], ocspOnline = false } = {}) {
   initEngine();
   const firmas = [];
 
@@ -192,6 +193,31 @@ export async function verificar(pdf, { trustRoots = [], crls = [] } = {}) {
       v.revocacion = cert ? chequearRevocacion(cert, sd, crls) : { metodo: "no-verificada", revocado: false };
       if (v.revocacion.revocado) {
         v.observaciones.push(`Certificado revocado${v.revocacion.fecha ? " el " + v.revocacion.fecha.slice(0, 10) : ""}.`);
+      }
+      // 2c) OCSP: respuestas provistas/embebidas (offline) refinan la revocación; precede a la CRL.
+      // La consulta online (ocspOnline) es OPT-IN — la única salida a la red del motor.
+      if (cert && (ocsps.length || ocspOnline)) {
+        const certs = (sd.certificates || []).filter((c) => c instanceof Certificate);
+        const issuer = certs.find((c) => c.subject.toString() === cert.issuer.toString())
+          || trustRoots.find((c) => c.subject.toString() === cert.issuer.toString());
+        if (issuer) {
+          let resuelto = false;
+          for (const der of ocsps) {
+            const o = await validarRespuestaOCSP(cert, issuer, der);
+            if (o.aplicable) {
+              v.revocacion = { metodo: "ocsp", revocado: o.revocado };
+              if (o.revocado) v.observaciones.push("Certificado revocado (OCSP).");
+              resuelto = true; break;
+            }
+          }
+          if (!resuelto && ocspOnline) {
+            const o = await consultarOCSPOnline(cert, issuer);
+            if (o.aplicable) {
+              v.revocacion = { metodo: "ocsp-online", revocado: o.revocado };
+              if (o.revocado) v.observaciones.push("Certificado revocado (OCSP online).");
+            }
+          }
+        }
       }
 
       // 3) Cadena hasta una raíz de confianza.

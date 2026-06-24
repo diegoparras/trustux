@@ -18,11 +18,11 @@ legalización: *cifras que cierran **y** firma del matriculado verificada*— y 
 
 ![Local](https://img.shields.io/badge/local-100%25-0E9AAB) ![Self-hosted](https://img.shields.io/badge/self--hosted-ok-0E9AAB) ![Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-0E9AAB)
 
-> Estado: **app standalone + motor PAdES + XAdES funcionando.** `firma-core` verifica integridad,
-> identidad (CUIT), cadena de confianza y revocación por CRL (offline) sobre PDFs (PAdES) y XML
-> (XAdES, facturas AFIP). Hay una **UI web** para subir documentos (`npm start`), con **SSO opcional
-> via Lockatus**, y está integrado en Selega (gateado por el superadmin). Tests verdes. Falta la
-> revocación online (proxy gateado) y CAdES. Ver [`docs/SPEC.md`](docs/SPEC.md).
+> Estado: **motor completo + app standalone.** `firma-core` verifica integridad, identidad (CUIT),
+> cadena de confianza y revocación (CRL offline + OCSP) sobre los tres estándares: **PAdES** (PDF),
+> **XAdES** (XML, facturas AFIP) y **CAdES** (CMS `.p7m`/`.p7s`). Hay una **UI web** para subir
+> documentos (`npm start`), con **SSO opcional via Lockatus**, e integración con Selega (gateada por
+> el superadmin). Tests verdes (24 casos). Ver [`docs/SPEC.md`](docs/SPEC.md).
 
 </div>
 
@@ -42,7 +42,7 @@ poder usar la herramienta y no poder.
   actualizaciones incrementales post-firma).
 - **Identidad** — cadena de certificados hasta una raíz de confianza (**AC Raíz República
   Argentina** precargada, editable por jurisdicción); extrae nombre, **CUIT/CUIL**, AC emisora y rol.
-- **Vigencia** — revocación por CRL (*offline-first*, embebida o del trust store) y sello de tiempo (RFC 3161). OCSP online pendiente.
+- **Vigencia** — revocación por **CRL** (*offline-first*) y por **OCSP** (respuestas embebidas/provistas offline, y consulta online opt-in); sello de tiempo (RFC 3161).
 - **Estándares** — PAdES (PDF), XAdES (XML, facturas AFIP/ARCA) y CAdES (CMS `.p7m`/`.p7s`) funcionando.
 
 ## Integración con Selega
@@ -78,6 +78,8 @@ trustux/
 │   ├── pades.js          extrae firmas del PDF (ByteRange + CMS)
 │   ├── verify.js         PAdES: integridad · identidad (CUIT) · cadena · revocación · veredicto
 │   ├── xades.js          XAdES: firmas XML (facturas AFIP), reusa identidad y cadena
+│   ├── cades.js          CAdES: firmas CMS .p7m/.p7s, reusa todo el motor PAdES
+│   ├── ocsp.js           revocación OCSP (validación de respuesta + consulta online opt-in)
 │   └── cli.js            verifica fixtures/ por consola
 ├── server/               app standalone: sirve la UI y /api/verificar (PDF o XML)
 │   ├── index.js          HTTP + estático + login Lockatus (opcional, tras flag)
@@ -113,7 +115,7 @@ la app en Lockatus). El login va por OIDC (Authorization Code + PKCE); apagado n
 ```bash
 npm install
 npm run verificar      # verifica los PDFs de fixtures/ y muestra el veredicto
-npm test               # tablas de verdad: PAdES (8/8) + XAdES (3/3) + standalone (5/5)
+npm test               # PAdES (8) + XAdES (3) + CAdES (3) + OCSP (4) + standalone (6)
 ```
 
 ## Licencia

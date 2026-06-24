@@ -38,7 +38,9 @@ export async function verificarDocumento(buf) {
   cargarTrust();
   const head = buf.slice(0, 256).toString("latin1").replace(/^﻿/, "").trimStart();
   if (head.startsWith("%PDF")) {
-    return { tipo: "PDF (PAdES)", ...(await verificar(buf, { trustRoots: _roots, crls: _crls })) };
+    // OCSP online: opt-in por env (OCSP_ONLINE=on). Por defecto offline (solo CRL del trust store).
+    const ocspOnline = process.env.OCSP_ONLINE === "on";
+    return { tipo: "PDF (PAdES)", ...(await verificar(buf, { trustRoots: _roots, crls: _crls, ocspOnline })) };
   }
   if (head.startsWith("<")) {
     return { tipo: "XML (XAdES)", ...(await verificarXml(buf.toString("utf8"), { trustRoots: _roots })) };

@@ -230,7 +230,9 @@ Los ataques clásicos a firma PAdES se mitigan explícitamente:
 - [ ] Pestaña "Firma" en el trabajo + informe exportable.
 
 **Difiere a Fase 2+:**
-- CAdES (`.p7s`) y OCSP online (proxy gateado). *(XAdES ya implementado: `firma-core/xades.js`.)*
+- Extraer OCSP/CRL **embebidos** del DSS de un PAdES-LT/LTA (hoy se validan respuestas provistas).
+- Empaquetar `firma-core` para correr 100% en el browser (hoy verifica server-side en el standalone).
+- *(Ya implementado: PAdES, XAdES, CAdES, revocación CRL + OCSP, app standalone y SSO con Lockatus.)*
 - Validación por lote (carpeta → informe único).
 - Extracción a app standalone **Trustux** (mismo stack que Selega).
 - **Firmar** (no solo validar): `.pfx` PKCS#12 y tokens USB PKCS#11 — lo más OS-dependiente, va al final.

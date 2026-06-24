@@ -24,6 +24,9 @@ prueba de dos niveles (Root CA → firmantes).
 > El trust store incluye `trust/test.crl`, una lista de revocación firmada por la raíz de prueba
 > que revoca el certificado de LOPEZ (el firmante del `06`). El resto de los certificados figura
 > como verificado-y-vigente contra esa CRL.
+>
+> `ocsp/ocsp-good.der` y `ocsp/ocsp-revoked.der` son **respuestas OCSP** firmadas por la raíz para
+> el certificado del contador, para probar la validación OCSP sin red (ver `test/test-ocsp.mjs`).
 
 ## Detalle de cada caso
 

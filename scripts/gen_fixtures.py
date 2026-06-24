@@ -234,6 +234,22 @@ def main():
     (FIX / "08-cades-alterado.p7m").write_bytes(p7m.replace(CADES_OK, CADES_MAL, 1))
     print("  08-cades-alterado.p7m  (importe cambiado post-firma -> inválida)")
 
+    # Respuestas OCSP firmadas por la raíz: una "vigente" y una "revocada" para el contador.
+    # Sirven para probar la validación OCSP del motor SIN red (la respuesta ya viene firmada).
+    from cryptography.x509 import ocsp
+    OCSP = FIX / "ocsp"; OCSP.mkdir(exist_ok=True)
+    def make_ocsp(leaf, status, revtime=None):
+        b = (ocsp.OCSPResponseBuilder()
+             .add_response(cert=leaf, issuer=root_cert, algorithm=hashes.SHA1(),
+                           cert_status=status, this_update=NOT_BEFORE, next_update=NOT_AFTER,
+                           revocation_time=revtime, revocation_reason=None)
+             .responder_id(ocsp.OCSPResponderEncoding.NAME, root_cert))
+        return b.sign(root_key, hashes.SHA256()).public_bytes(serialization.Encoding.DER)
+    (OCSP / "ocsp-good.der").write_bytes(make_ocsp(cc, ocsp.OCSPCertStatus.GOOD))
+    (OCSP / "ocsp-revoked.der").write_bytes(
+        make_ocsp(cc, ocsp.OCSPCertStatus.REVOKED, datetime.datetime(2025, 6, 1, tzinfo=datetime.timezone.utc)))
+    print("  ocsp/ocsp-good.der + ocsp-revoked.der  (para el contador)")
+
     # limpieza de los .p12 temporales (las claves privadas no se commitean)
     for p in ("_contador.p12", "_sindico.p12", "_revocado.p12"):
         (ROOT / "scripts" / p).unlink(missing_ok=True)
