@@ -43,7 +43,7 @@ poder usar la herramienta y no poder.
 - **Identidad** — cadena de certificados hasta una raíz de confianza (**AC Raíz República
   Argentina** precargada, editable por jurisdicción); extrae nombre, **CUIT/CUIL**, AC emisora y rol.
 - **Vigencia** — revocación por CRL (*offline-first*, embebida o del trust store) y sello de tiempo (RFC 3161). OCSP online pendiente.
-- **Estándares** — PAdES (PDF) y XAdES (XML, facturas AFIP/ARCA) funcionando; CAdES (`.p7s`) pendiente.
+- **Estándares** — PAdES (PDF), XAdES (XML, facturas AFIP/ARCA) y CAdES (CMS `.p7m`/`.p7s`) funcionando.
 
 ## Integración con Selega
 

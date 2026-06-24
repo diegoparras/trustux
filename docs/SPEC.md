@@ -37,7 +37,7 @@ luego como app standalone **Trustux** (mismo stack: Node ESM + vanilla HTTP, com
 |----------|-----------|------------------------------|------|
 | **PAdES** | PDF | Balances, dictámenes, escritos firmados (el 90% de Selega) | **listo** |
 | **XAdES** | XML | Facturas electrónicas AFIP/ARCA, comprobantes | **listo** |
-| **CAdES** | `.p7s` / `.p7m` | Firmas desprendidas, adjuntos firmados | pendiente |
+| **CAdES** | `.p7s` / `.p7m` | Firmas desprendidas, adjuntos firmados | **listo** |
 
 Niveles de firma reconocidos (perfil baseline ETSI): **-B** (básica), **-T** (con sello de
 tiempo), **-LT** (long-term, revocación embebida → **valida 100% offline**), **-LTA** (con

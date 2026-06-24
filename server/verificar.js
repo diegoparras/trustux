@@ -6,6 +6,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { verificar, cargarCert, cargarCRL } from "../firma-core/verify.js";
 import { verificarXml } from "../firma-core/xades.js";
+import { verificarCms } from "../firma-core/cades.js";
 
 const TRUST_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "trust");
 
@@ -42,7 +43,11 @@ export async function verificarDocumento(buf) {
   if (head.startsWith("<")) {
     return { tipo: "XML (XAdES)", ...(await verificarXml(buf.toString("utf8"), { trustRoots: _roots })) };
   }
-  const e = new Error("Formato no reconocido: se espera un PDF o un XML firmado.");
+  // CMS / CAdES: PEM (-----BEGIN PKCS7/CMS) o DER (ASN.1 SEQUENCE = byte 0x30).
+  if (/^-----BEGIN (PKCS7|CMS)/.test(head) || buf[0] === 0x30) {
+    return { tipo: "CMS (CAdES)", ...(await verificarCms(buf, { trustRoots: _roots, crls: _crls })) };
+  }
+  const e = new Error("Formato no reconocido: se espera un PDF, un XML o un CMS (.p7m/.p7s) firmado.");
   e.code = "formato";
   throw e;
 }

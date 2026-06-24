@@ -28,6 +28,7 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import pkcs12
+from cryptography.hazmat.primitives.serialization import pkcs7
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
@@ -49,6 +50,10 @@ NOT_AFTER = datetime.datetime(2035, 1, 1, tzinfo=datetime.timezone.utc)
 # Cadena de texto del saldo. MISMA LONGITUD que la versión alterada (clave: no correr offsets).
 SALDO_OK = b"$ 1.000.000,00"
 SALDO_MAL = b"$ 9.000.000,00"
+
+# CAdES: importe dentro del contenido CMS (misma longitud en la versión alterada).
+CADES_OK = b"0001000.00"
+CADES_MAL = b"9991000.00"
 
 
 def _key():
@@ -218,6 +223,16 @@ def main():
                box=(60, 300, 320, 360), reason="Firma de certificado revocado")
     (FIX / "06-firmado-revocado.pdf").write_bytes(f06)
     print("  06-firmado-revocado.pdf  (cert revocado → debe dar inválida)")
+
+    # 07 / 08 — CAdES (CMS .p7m con el contenido embebido) íntegro y alterado.
+    contenido = b"Comprobante de prueba Trustux - IMPORTE " + CADES_OK + b" - sin valor legal"
+    p7m = (pkcs7.PKCS7SignatureBuilder().set_data(contenido).add_signer(cc, ck, hashes.SHA256())
+           .sign(serialization.Encoding.DER, [pkcs7.PKCS7Options.Binary]))
+    (FIX / "07-cades.p7m").write_bytes(p7m)
+    print("  07-cades.p7m  (CMS con contenido embebido)")
+    assert CADES_OK in p7m and len(CADES_OK) == len(CADES_MAL)
+    (FIX / "08-cades-alterado.p7m").write_bytes(p7m.replace(CADES_OK, CADES_MAL, 1))
+    print("  08-cades-alterado.p7m  (importe cambiado post-firma -> inválida)")
 
     # limpieza de los .p12 temporales (las claves privadas no se commitean)
     for p in ("_contador.p12", "_sindico.p12", "_revocado.p12"):

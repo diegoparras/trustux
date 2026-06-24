@@ -14,7 +14,7 @@ import { webcrypto } from "node:crypto";
 import { extraerFirmas, toAB } from "./pades.js";
 
 let _engineListo = false;
-function initEngine() {
+export function initEngine() {
   if (_engineListo) return;
   const eng = new CryptoEngine({ name: "trustux", crypto: webcrypto });
   setEngine("trustux", eng, eng);
@@ -32,6 +32,11 @@ const DIGEST = {
   "2.16.840.1.101.3.4.2.3": "SHA-512",
 };
 const DIGEST_DEBIL = new Set(["MD5", "SHA-1"]);
+/** Nombre del algoritmo de digest de un SignerInfo y si es inseguro (compartido PAdES/CAdES). */
+export function algoritmoDe(si) {
+  const nombre = DIGEST[si?.digestAlgorithm?.algorithmId] || si?.digestAlgorithm?.algorithmId || "?";
+  return { nombre, debil: DIGEST_DEBIL.has(nombre) };
+}
 const OID_SIGNING_TIME = "1.2.840.113549.1.9.5";
 const OID_TIMESTAMP = "1.2.840.113549.1.9.16.2.14"; // RFC 3161 signature-time-stamp (unsigned attr)
 
@@ -87,7 +92,7 @@ export async function validarCadena(certs, trustRoots = []) {
 // Revocación OFFLINE: ¿el serial del firmante figura en alguna CRL de su emisor?
 // Mira las CRL embebidas en la firma (PAdES-LT valida sin red) y las provistas por el
 // trust store. No sale a la red: si no hay CRL del emisor, queda "no-verificada".
-function chequearRevocacion(cert, sd, crlsProvistas) {
+export function chequearRevocacion(cert, sd, crlsProvistas) {
   const embebidas = (sd.crls || []).filter((c) => c instanceof CertificateRevocationList);
   const todas = [...embebidas, ...crlsProvistas];
   if (!todas.length) return { metodo: "no-verificada", revocado: false };
@@ -116,7 +121,7 @@ const attr = (cert, oid) => {
 };
 
 /** Encuentra el certificado del firmante (el referenciado por el SignerInfo). */
-function certDelFirmante(sd) {
+export function certDelFirmante(sd) {
   const si = sd.signerInfos[0];
   const certs = (sd.certificates || []).filter((c) => c instanceof Certificate);
   // SID por issuer+serial: casamos por número de serie.

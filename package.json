@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server/index.js",
     "verificar": "node firma-core/cli.js",
-    "test": "node test/test-core.mjs && node test/test-xades.mjs && node test/test-standalone.mjs"
+    "test": "node test/test-core.mjs && node test/test-xades.mjs && node test/test-cades.mjs && node test/test-standalone.mjs"
   },
   "dependencies": {
     "@peculiar/webcrypto": "^1.7.1",

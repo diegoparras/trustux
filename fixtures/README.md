@@ -18,6 +18,8 @@ prueba de dos niveles (Root CA → firmantes).
 | `04-firmado-con-sello.pdf` | 1 | íntegra | confiable | TSA | **con sello** (TSA no confiable offline → observada si se exige la cadena de la TSA) |
 | `05-firma-sha1.pdf` | 1 | digest SHA-1 | confiable | — | **inválida** (algoritmo de digest inseguro) |
 | `06-firmado-revocado.pdf` | 1 | íntegra | confiable | — | **inválida** (certificado revocado en la CRL) |
+| `07-cades.p7m` | 1 | íntegra | confiable | — | **válida** (CMS/CAdES con contenido embebido) |
+| `08-cades-alterado.p7m` | 1 | **rota** | (irrelevante) | — | **inválida** (contenido CMS cambiado post-firma) |
 
 > El trust store incluye `trust/test.crl`, una lista de revocación firmada por la raíz de prueba
 > que revoca el certificado de LOPEZ (el firmante del `06`). El resto de los certificados figura

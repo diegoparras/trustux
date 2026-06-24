@@ -38,8 +38,14 @@ await test("factura XML alterada → inválida", async () => {
   assert.equal(r.global, "invalida");
 });
 
+await test("CMS .p7m firmado → detecta CAdES y da válida", async () => {
+  const r = await verificarDocumento(fx("fixtures/07-cades.p7m"));
+  assert.match(r.tipo, /CAdES/);
+  assert.equal(r.global, "valida");
+});
+
 await test("contenido no firmable → error de formato", async () => {
   await assert.rejects(() => verificarDocumento(Buffer.from("hola mundo")), /Formato no reconocido/);
 });
 
-console.log(`\n${ok}/5 OK`);
+console.log(`\n${ok}/6 OK`);
