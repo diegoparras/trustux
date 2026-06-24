@@ -17,6 +17,11 @@ prueba de dos niveles (Root CA → firmantes).
 | `03-doble-firma.pdf` | 2 | ✅ ✅ | ✅ ✅ | — | 🟢 🟢 (contador + síndico) |
 | `04-firmado-con-sello.pdf` | 1 | ✅ íntegra | ✅ confiable | ✅ TSA | 🟢 **con sello** (TSA no confiable offline → 🟡 si se exige cadena de la TSA) |
 | `05-firma-sha1.pdf` | 1 | ⚠️ digest SHA-1 | ✅ confiable | — | 🔴 **inválida** (algoritmo de digest inseguro) |
+| `06-firmado-revocado.pdf` | 1 | ✅ íntegra | ✅ confiable | — | 🔴 **inválida** (certificado revocado en la CRL) |
+
+> El trust store incluye `trust/test.crl`, una lista de revocación firmada por la raíz de prueba
+> que revoca el certificado de LOPEZ (el firmante del `06`). El resto de los certificados figura
+> como verificado-y-vigente contra esa CRL.
 
 ## Detalle de cada caso
 
@@ -41,6 +46,11 @@ prueba de dos niveles (Root CA → firmantes).
 - **05 — SHA-1.** Firma íntegra y de cadena confiable, pero hecha con **digest SHA-1** (roto por
   colisiones). El motor la marca 🔴 **inválida** aunque "cierre": un algoritmo inseguro no da
   garantía de integridad. Prueba el allowlist de algoritmos.
+
+- **06 — revocado.** Firma íntegra, cadena a la raíz confiable… pero el certificado del firmante
+  (LOPEZ) está **revocado** en `trust/test.crl`. El motor la marca 🔴 **inválida**. Prueba la
+  revocación **offline** (sin red): la CRL viene del trust store, como la traería un PAdES-LT
+  embebida.
 
 ## Regenerar
 

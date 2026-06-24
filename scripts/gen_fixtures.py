@@ -152,10 +152,28 @@ def main():
 
     ck, cc = make_signer("PEREZ, Juan Carlos", "20-12345678-9", "Contador Publico", root_key, root_cert)
     sk, sc = make_signer("GOMEZ, Maria Elena", "27-23456789-4", "Sindico", root_key, root_cert)
+    rk, rc = make_signer("LOPEZ, Hernan", "20-30111222-3", "Contador Publico", root_key, root_cert)
     to_p12(ROOT / "scripts" / "_contador.p12", ck, cc, root_cert, "Contador")
     to_p12(ROOT / "scripts" / "_sindico.p12", sk, sc, root_cert, "Sindico")
+    to_p12(ROOT / "scripts" / "_revocado.p12", rk, rc, root_cert, "Revocado")
     contador = signers.SimpleSigner.load_pkcs12(ROOT / "scripts" / "_contador.p12", passphrase=b"1234")
     sindico = signers.SimpleSigner.load_pkcs12(ROOT / "scripts" / "_sindico.p12", passphrase=b"1234")
+    revocado = signers.SimpleSigner.load_pkcs12(ROOT / "scripts" / "_revocado.p12", passphrase=b"1234")
+
+    # CRL firmada por la raíz que revoca el certificado de LOPEZ (lo demás queda vigente).
+    crl = (
+        x509.CertificateRevocationListBuilder()
+        .issuer_name(root_cert.subject)
+        .last_update(NOT_BEFORE).next_update(NOT_AFTER)
+        .add_revoked_certificate(
+            x509.RevokedCertificateBuilder()
+            .serial_number(rc.serial_number)
+            .revocation_date(datetime.datetime(2025, 6, 1, tzinfo=datetime.timezone.utc))
+            .build())
+        .sign(root_key, hashes.SHA256())
+    )
+    TRUST.joinpath("test.crl").write_bytes(crl.public_bytes(serialization.Encoding.PEM))
+    print("  CRL → fixtures/trust/test.crl (revoca a LOPEZ)")
 
     base = base_pdf()
 
@@ -195,8 +213,14 @@ def main():
     (FIX / "05-firma-sha1.pdf").write_bytes(f05)
     print("  05-firma-sha1.pdf  (digest SHA-1 → debe dar inválida)")
 
+    # 06 — firmado por un certificado REVOCADO (figura en test.crl) → inválida.
+    f06 = sign(base, "FirmaRevocada", revocado,
+               box=(60, 300, 320, 360), reason="Firma de certificado revocado")
+    (FIX / "06-firmado-revocado.pdf").write_bytes(f06)
+    print("  06-firmado-revocado.pdf  (cert revocado → debe dar inválida)")
+
     # limpieza de los .p12 temporales (las claves privadas no se commitean)
-    for p in ("_contador.p12", "_sindico.p12"):
+    for p in ("_contador.p12", "_sindico.p12", "_revocado.p12"):
         (ROOT / "scripts" / p).unlink(missing_ok=True)
     print("Listo.")
 
