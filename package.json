@@ -1,17 +1,19 @@
 {
   "name": "trustux",
-  "version": "0.2.0",
-  "description": "Trustux — verificación de firma digital 100% local (PAdES + XAdES). Parte de la Suite Escriba.",
+  "version": "0.3.0",
+  "description": "Trustux — verificación de firma digital 100% local (PAdES + XAdES), con UI web y SSO opcional via Lockatus. Parte de la Suite Escriba.",
   "type": "module",
   "license": "Apache-2.0",
   "scripts": {
+    "start": "node server/index.js",
     "verificar": "node firma-core/cli.js",
-    "test": "node test/test-core.mjs && node test/test-xades.mjs"
+    "test": "node test/test-core.mjs && node test/test-xades.mjs && node test/test-standalone.mjs"
   },
   "dependencies": {
     "@peculiar/webcrypto": "^1.7.1",
     "@xmldom/xmldom": "^0.8.13",
     "asn1js": "^3.0.10",
+    "jose": "^5.10.0",
     "pkijs": "^3.4.0",
     "pvutils": "^1.1.5",
     "xadesjs": "^2.6.7",

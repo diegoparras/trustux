@@ -1,0 +1,17 @@
+services:
+  trustux:
+    build: .
+    image: ghcr.io/diegoparras/trustux
+    ports:
+      - "8092:8092"
+    environment:
+      # Federación con Lockatus (SSO de la suite). Por defecto "local" → sin login, single-user.
+      AUTH_MODE: ${AUTH_MODE:-local}
+      LOCKATUS_ISSUER: ${LOCKATUS_ISSUER:-http://localhost:8081}
+      CLIENT_ID: ${CLIENT_ID:-trustux}
+      REDIRECT_URI: ${REDIRECT_URI:-http://localhost:8092/callback}
+      TRUSTUX_SECRET: ${TRUSTUX_SECRET:-cambiar-en-produccion}
+    # El trust store es editable sin rebuild: montá tus raíces reales acá.
+    volumes:
+      - ./trust:/app/trust:ro
+    restart: unless-stopped

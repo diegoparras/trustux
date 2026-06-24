@@ -18,9 +18,10 @@ legalización: *cifras que cierran **y** firma del matriculado verificada*— y 
 
 ![Local](https://img.shields.io/badge/local-100%25-0E9AAB) ![Self-hosted](https://img.shields.io/badge/self--hosted-ok-0E9AAB) ![Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-0E9AAB)
 
-> Estado: **motor PAdES + XAdES funcionando.** `firma-core` verifica integridad, identidad
-> (CUIT), cadena de confianza y revocación por CRL (offline) sobre PDFs (PAdES) y XML (XAdES,
-> facturas AFIP), con tests verdes. Integrado en Selega (gateado por el superadmin). Falta la
+> Estado: **app standalone + motor PAdES + XAdES funcionando.** `firma-core` verifica integridad,
+> identidad (CUIT), cadena de confianza y revocación por CRL (offline) sobre PDFs (PAdES) y XML
+> (XAdES, facturas AFIP). Hay una **UI web** para subir documentos (`npm start`), con **SSO opcional
+> via Lockatus**, y está integrado en Selega (gateado por el superadmin). Tests verdes. Falta la
 > revocación online (proxy gateado) y CAdES. Ver [`docs/SPEC.md`](docs/SPEC.md).
 
 </div>
@@ -78,22 +79,41 @@ trustux/
 │   ├── verify.js         PAdES: integridad · identidad (CUIT) · cadena · revocación · veredicto
 │   ├── xades.js          XAdES: firmas XML (facturas AFIP), reusa identidad y cadena
 │   └── cli.js            verifica fixtures/ por consola
-├── test/
-│   ├── test-core.mjs     tabla de verdad PAdES (npm test)
-│   └── test-xades.mjs    tabla de verdad XAdES
+├── server/               app standalone: sirve la UI y /api/verificar (PDF o XML)
+│   ├── index.js          HTTP + estático + login Lockatus (opcional, tras flag)
+│   └── verificar.js      carga el trust store y enruta al motor según el tipo
+├── client/               cliente OIDC de Lockatus (vendorizado)
+├── public/               UI web (drag-and-drop, veredicto con iconos)
+├── trust/                raíces de confianza + CRLs (editable sin rebuild)
+├── test/                 tablas de verdad: PAdES, XAdES y adaptador del standalone
 ├── docs/SPEC.md          spec técnica + alcance
-├── fixtures/             PDFs firmados + trust/ (raíz + CRL de prueba)
-│   ├── xades/            facturas XML firmadas + su raíz de prueba
-│   └── README.md         tabla de verdad (veredicto esperado de cada caso)
+├── fixtures/             PDFs y facturas XML firmadas de ejemplo
 └── scripts/              generadores de fixtures (Python para PAdES, Node para XAdES)
 ```
+
+## App standalone (UI web)
+
+Subí documentos firmados por el navegador y obtené el veredicto, 100% local:
+
+```bash
+npm install
+npm start              # http://localhost:8092  (subí un PDF o XML firmado)
+```
+
+Con Docker: `docker compose up -d --build`.
+
+### SSO opcional con Lockatus
+
+Por defecto Trustux es single-user (sin login). Para que los usuarios entren con el SSO de la
+suite, poné `AUTH_MODE=federado` y las variables de [`.env.example`](.env.example) (registrando
+la app en Lockatus). El login va por OIDC (Authorization Code + PKCE); apagado no rompe nada.
 
 ## Probar el motor
 
 ```bash
 npm install
 npm run verificar      # verifica los PDFs de fixtures/ y muestra el veredicto
-npm test               # tabla de verdad: PAdES (8/8) + XAdES (3/3)
+npm test               # tablas de verdad: PAdES (8/8) + XAdES (3/3) + standalone (5/5)
 ```
 
 ## Licencia
