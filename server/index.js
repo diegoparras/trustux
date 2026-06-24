@@ -12,7 +12,7 @@ import { createLockatusClient } from "../client/lockatus-client.mjs";
 const ROOT = normalize(join(dirname(fileURLToPath(import.meta.url)), ".."));
 const PUBLIC = join(ROOT, "public");
 const VERSION = (() => { try { return JSON.parse(readSync(join(ROOT, "package.json"), "utf8")).version || ""; } catch { return ""; } })();
-const PORT = Number(process.env.PORT) || 8092;
+const PORT = Number(process.env.PORT) || 8095;
 
 // --- Federación opcional con Lockatus (SSO de la suite). Apagada por defecto. ---
 const AUTH = process.env.AUTH_MODE === "federado" ? "federado" : "local";

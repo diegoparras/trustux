@@ -97,7 +97,7 @@ Subí documentos firmados por el navegador y obtené el veredicto, 100% local:
 
 ```bash
 npm install
-npm start              # http://localhost:8092  (subí un PDF o XML firmado)
+npm start              # http://localhost:8095  (subí un PDF o XML firmado)
 ```
 
 Con Docker: `docker compose up -d --build`.

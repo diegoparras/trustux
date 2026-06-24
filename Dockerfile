@@ -13,6 +13,6 @@ COPY client ./client
 COPY public ./public
 COPY trust ./trust
 
-ENV PORT=8092
-EXPOSE 8092
+ENV PORT=8095
+EXPOSE 8095
 CMD ["node", "server/index.js"]
