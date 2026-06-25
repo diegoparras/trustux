@@ -18,17 +18,54 @@ const SEM = {
 };
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+// Versión: del /api/me o, como respaldo, del <meta trustux-version>. Va al "Acerca de".
+function setVersion(v) {
+  const meta = document.querySelector('meta[name="trustux-version"]')?.content || "";
+  const raw = v || (/^\d/.test(meta) ? meta : "");
+  $("#ver").textContent = raw ? "v" + raw : "—";
+}
+
+// Menú kebab del header: tema, "Acerca de" y (si hay sesión) cerrar sesión. Todo el
+// chrome vive acá adentro. Click afuera o Escape lo cierra.
+function montarChrome() {
+  const menu = $("#hdr-menu"), btn = $("#btn-menu");
+  btn.onclick = (e) => { e.stopPropagation(); const open = menu.classList.toggle("hidden") === false; btn.setAttribute("aria-expanded", String(open)); };
+  menu.addEventListener("click", (e) => { if (e.target.closest(".menu-item")) menu.classList.add("hidden"); });
+  document.addEventListener("click", (e) => { if (!menu.classList.contains("hidden") && !menu.contains(e.target) && !btn.contains(e.target)) menu.classList.add("hidden"); });
+
+  $("#btn-theme").onclick = () => {
+    const dark = document.documentElement.dataset.theme === "dark";
+    if (dark) { delete document.documentElement.dataset.theme; localStorage.setItem("trustux.theme", "light"); }
+    else { document.documentElement.dataset.theme = "dark"; localStorage.setItem("trustux.theme", "dark"); }
+  };
+
+  // "Acerca de" → modal canónico (.modal-back / .modal-card).
+  const modal = $("#about-modal");
+  const cerrar = () => modal.classList.add("hidden");
+  $("#btn-acerca").onclick = () => modal.classList.remove("hidden");
+  $("#about-x").onclick = cerrar;
+  modal.addEventListener("click", (e) => { if (e.target === modal) cerrar(); });
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") { cerrar(); menu.classList.add("hidden"); } });
+}
+
 async function init() {
+  montarChrome();
   const me = await fetch("/api/me").then((r) => r.json()).catch(() => ({ auth: "local", autenticado: true }));
-  $("#ver").textContent = me.version ? "v" + me.version : "";
+  setVersion(me.version);
   // Federado y sin sesión → mostrar login, ocultar la zona de subida.
   if (me.auth === "federado" && !me.autenticado) {
     $("#gate-login").classList.remove("hidden");
     $("#zona").classList.add("hidden");
     return;
   }
+  // Hay sesión federada: el usuario y "Cerrar sesión" van al menú (.menu-user).
   if (me.usuario) {
-    $("#user-box").innerHTML = `${esc(me.usuario.email)} · <span class="rol">${esc(me.usuario.role || "")}</span> · <a href="/logout">salir</a>`;
+    const mu = $("#menu-user");
+    mu.innerHTML = `${esc(me.usuario.email)} · <span class="rol">${esc(me.usuario.role || "")}</span>`;
+    mu.hidden = false;
+    $("#btn-logout").hidden = false;
+    $("#menu-sep-logout").hidden = false;
+    $("#btn-logout").onclick = () => { location.href = "/logout"; };
   }
   montarDropzone();
 }
