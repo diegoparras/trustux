@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.full
-    image: ghcr.io/diegoparras/trustux:full
+    image: ghcr.io/diegoparras/trustux:latest-full
     ports:
       - "8095:8095"
     environment:

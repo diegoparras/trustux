@@ -92,9 +92,18 @@ Lockatus. El primer superadmin ajusta la matriz en `/goodunluck-admin`.
 
 ## 7. Deploy en EasyPanel
 
-EasyPanel (no usa docker-compose): creá un servicio tipo **App**.
+El CI (`.github/workflows/docker-publish.yml`) publica dos variantes en ghcr en cada push a `main`:
 
-- **Source**: este repo, Dockerfile = `Dockerfile.full`.
+- `ghcr.io/diegoparras/trustux:latest` — base (liviana, Tiers 1-2), multi-arch.
+- `ghcr.io/diegoparras/trustux:latest-full` — **full con Tier 3 nativo** (amd64). Es la que querés
+  para cracking. En releases (`vX.Y.Z`) también salen `:X.Y.Z` y `:X.Y.Z-full`.
+
+EasyPanel (no usa docker-compose): creá o editá el servicio tipo **App**.
+
+- **Source = Image**: `ghcr.io/diegoparras/trustux:latest-full` (o un tag fijo `:X.Y.Z-full`).
+  No necesitás que EasyPanel compile: la imagen ya viene construida del CI.
+- Si el package es privado, cargá credenciales del registry (usuario `diegoparras` + un PAT con
+  `read:packages`). Si es público, no hace falta.
 - **Env**: las variables de la sección 4.
 - **Volumen**: montá uno en `/app/config` (persistencia de matriz + auditoría). Opcional otro en
   `/app/trust` si vas a subir raíces propias.
