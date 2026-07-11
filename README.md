@@ -115,7 +115,7 @@ la app en Lockatus). El login va por OIDC (Authorization Code + PKCE); apagado n
 ```bash
 npm install
 npm run verificar      # verifica los PDFs de fixtures/ y muestra el veredicto
-npm test               # PAdES (8) + XAdES (3) + CAdES (3) + OCSP (4) + standalone (6) + goodunluck (18)
+npm test               # PAdES (8) + XAdES (3) + CAdES (3) + OCSP (4) + standalone (6) + goodunluck (18) + crack-native (9+John) + archive (3)
 ```
 
 ## Módulo goodunluck — recuperar archivos protegidos
@@ -133,15 +133,17 @@ Motor por tiers (en `unlock-core/`):
   stream PROJECT en `vbaProject.bin`, `vba.js`) y **fuga de metadatos del ZIP** (lista nombres/tamaños/
   CRC-32 de un ZIP cifrado sin la clave, `archive.js`). Siempre funcionan.
 - **Tier 2 — descifrar con clave conocida:** PDF con `qpdf`; **Office cifrado (ECMA-376 Agile)** con
-  `office-agile.js` (`node:crypto` + `cfb`), port de la implementación de GoodUnLock.
+  `office-agile.js` (`node:crypto` + `cfb`), port de la implementación de GoodUnLock; **ZIP/RAR** con
+  **7-Zip** (`archive.js`), que descifra y reempaqueta el contenido en un ZIP abierto para devolvértelo.
 - **Tier 3 — recuperar clave desconocida:** modelo de **jobs async** (submit → poll → download).
   Motores: **diccionario en JS puro** para Office (`recuperarClaveAgile`, sin binarios) y
   **John the Ripper / hashcat** (`crack-native.js`) para fuerza bruta/máscara y el resto de formatos.
   Para Office el hash `$office$` se construye desde los parámetros agile (sin `office2john`).
   `crack-native.js` mapea el hash a su modo de hashcat y marca las **llaves cortas garantizadas**
-  (Office 97-2003 y PDF RC4 de 40 bits). Los binarios son opcionales (imagen `Dockerfile.full` con
-  john/hashcat/qpdf/bkcrack); sin ellos, el diccionario de Office sigue andando. Gateado por
-  `cracking.enabled` (superadmin).
+  (Office 97-2003 y PDF RC4 de 40 bits). Al recuperar la clave se entrega **el archivo abierto**
+  (Office descifrado, PDF con `qpdf`, ZIP/RAR reempaquetado con 7-Zip), no solo la contraseña. Los
+  binarios son opcionales (imagen `Dockerfile.full` con john/hashcat/qpdf/bkcrack); sin ellos, el
+  diccionario de Office sigue andando. Gateado por `cracking.enabled` (superadmin).
 
 Fixtures en `fixtures/unlock/` (`python scripts/gen_unlock_fixtures.py`). Cracking nativo: imagen
 `Dockerfile.full`, o binarios en el PATH (o `JOHN_BIN`/`HASHCAT_BIN`).

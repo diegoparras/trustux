@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { analizarOffice, quitarProteccionOffice, descifrarOffice, recuperarClaveOffice } from "../unlock-core/office.js";
 import { analizarPdf, quitarPermisosPdf, descifrarPdf } from "../unlock-core/pdf.js";
-import { inspeccionarZip } from "../unlock-core/archive.js";
+import { inspeccionarZip, descifrarArchivo } from "../unlock-core/archive.js";
 import { parseAgile, hashOffice, decryptAgile } from "../unlock-core/office-agile.js";
 import { capacidades as capsNativas, crackJohn, extraerHash } from "../unlock-core/crack-native.js";
 
@@ -139,7 +139,8 @@ export async function desbloquear(buf, name, { tier, password, wordlist, motivo,
     } else if (tier === 2) {
       if (familia === "pdf") r = await descifrarPdf(buf, password);
       else if (familia === "office") r = descifrarOffice(buf, password, name);
-      else { const e = new Error("El descifrado de ZIP/RAR con clave llega en la próxima fase."); e.code = "no-aplica"; throw e; }
+      else if (familia === "zip" || familia === "rar") r = await descifrarArchivo(buf, password, familia);
+      else { const e = new Error(`El descifrado de ${familia} con clave no está soportado.`); e.code = "no-aplica"; throw e; }
     } else if (tier === 3) {
       if (!config().cracking.enabled) { const e = new Error("La recuperación de clave (Tier 3) está desactivada por el superadmin."); e.code = "no-aplica"; throw e; }
       if (familia === "office") r = recuperarClaveOffice(buf, wordlist, name);
@@ -194,7 +195,11 @@ export function crearJobRecuperacion(buf, name, { wordlist, motivo, propiedad, u
         const { password: pw } = await crackJohn(await extraerHash(buf, familia, name), { wordlist });
         if (!pw) { const e = new Error("No se recuperó la clave con esa wordlist."); e.code = "no-encontrada"; throw e; }
         password = pw;
-        if (familia === "pdf") archivo = (await descifrarPdf(buf, pw)).archivo;
+        // Con la clave, entregamos el archivo abierto (PDF con qpdf; ZIP/RAR con 7-Zip si está).
+        try {
+          if (familia === "pdf") archivo = (await descifrarPdf(buf, pw)).archivo;
+          else if (familia === "zip" || familia === "rar") archivo = (await descifrarArchivo(buf, pw, familia)).archivo;
+        } catch { /* sin descifrador (p.ej. 7z ausente) → devolvemos al menos la clave */ }
       } else {
         const e = new Error(`La recuperación de ${familia} necesita John/hashcat (imagen full o JOHN_BIN).`); e.code = "sin-binario"; throw e;
       }
@@ -223,6 +228,8 @@ export function archivoJob(id) {
 function nombreSalida(name = "documento", familia) {
   const m = String(name).match(/^(.*?)(\.[a-z0-9]+)?$/i);
   const stem = (m && m[1]) || "documento";
+  // ZIP/RAR descifrados se reempaquetan en un ZIP abierto: la salida siempre es .zip.
+  if (familia === "zip" || familia === "rar") return `${stem}-abierto.zip`;
   const ext = (m && m[2]) || (familia === "pdf" ? ".pdf" : "");
   return `${stem}-desbloqueado${ext}`;
 }

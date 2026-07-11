@@ -4,6 +4,52 @@
 // aunque el contenido de cada archivo tenga contraseña. Así que siempre se puede ver QUÉ hay
 // adentro de un ZIP protegido sin la clave. No rompe cripto: lee un dato que el formato deja
 // expuesto. (7z/RAR pueden cifrar el índice; el ZIP no.)
+//
+// Con la clave (conocida o recuperada), 7-Zip descifra y reempaqueta el contenido en un ZIP
+// abierto para devolvértelo. 7z es nativo (está en la imagen full; acá, el 7-Zip de Windows).
+import { spawn } from "node:child_process";
+import { writeFileSync, readFileSync, mkdtempSync, mkdirSync, rmSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+
+const SEVENZIP = process.env.SEVENZIP ||
+  (process.platform === "win32" ? "C:\\Program Files\\7-Zip\\7z.exe" : "7z");
+
+function corre7z(args, cwd) {
+  return new Promise((resolve) => {
+    let out = "", err = "";
+    let p;
+    try { p = spawn(SEVENZIP, args, { cwd, windowsHide: true }); }
+    catch { return resolve({ rc: -1, out, err, noExiste: true }); }
+    p.on("error", (e) => resolve({ rc: -1, out, err: e.message, noExiste: e.code === "ENOENT" }));
+    p.stdout?.on("data", (d) => { out += d; });
+    p.stderr?.on("data", (d) => { err += d; });
+    p.on("close", (rc) => resolve({ rc, out, err }));
+  });
+}
+
+/** ¿Está disponible 7-Zip? */
+export async function sevenzipDisponible() { return !(await corre7z(["i"])).noExiste; }
+
+/** Descifra un ZIP/RAR con la clave y reempaqueta el contenido en un ZIP abierto (sin clave). */
+export async function descifrarArchivo(buf, password, ext = "zip") {
+  const dir = mkdtempSync(join(tmpdir(), "gu-"));
+  try {
+    const inp = join(dir, "in." + ext); writeFileSync(inp, buf);
+    const outdir = join(dir, "out"); mkdirSync(outdir);
+    const r = await corre7z(["x", inp, "-p" + (password || ""), "-o" + outdir, "-y", "-bso0", "-bsp0"]);
+    if (r.noExiste) { const e = new Error("7-Zip no está instalado (imagen full o SEVENZIP)."); e.code = "sin-binario"; throw e; }
+    if (r.rc !== 0) {
+      const clave = /wrong password|password/i.test(r.err);
+      const e = new Error(clave ? "Clave incorrecta." : "No se pudo descifrar el archivo."); e.code = clave ? "clave" : "no-aplica"; throw e;
+    }
+    const outzip = join(dir, "abierto.zip");
+    const r2 = await corre7z(["a", "-tzip", "-mx=3", outzip, "."], outdir);
+    if (r2.rc !== 0 || !existsSync(outzip)) { const e = new Error("No se pudo reempaquetar el contenido."); e.code = "no-aplica"; throw e; }
+    return { archivo: readFileSync(outzip), formato: "zip" };
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+}
+
 const U16 = (b, o) => b.readUInt16LE(o);
 const U32 = (b, o) => b.readUInt32LE(o);
 
