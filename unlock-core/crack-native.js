@@ -91,16 +91,16 @@ export async function capacidades() {
   return { hashcat, john, bkcrack, qpdf, alguno: hashcat || john };
 }
 
-// Nombre del formato de John a partir del hash extraído.
+// Nombre del formato de John a partir del hash extraído (que puede venir con un label "archivo:").
 export function formatoJohn(hash) {
   const h = String(hash);
-  if (/^\$office\$/.test(h)) return "office";
-  if (/^\$oldoffice\$/.test(h)) return "oldoffice";
-  if (/^\$pdf\$/.test(h)) return "PDF";
-  if (/^\$zip2\$/.test(h)) return "ZIP";
-  if (/^\$pkzip2?\$/.test(h)) return "PKZIP";
-  if (/^\$RAR3\$/.test(h)) return "rar";
-  if (/^\$rar5\$/.test(h)) return "RAR5";
+  if (/\$oldoffice\$/.test(h)) return "oldoffice";
+  if (/\$office\$/.test(h)) return "office";
+  if (/\$pdf\$/.test(h)) return "PDF";
+  if (/\$zip2\$/.test(h)) return "ZIP";
+  if (/\$pkzip2?\$/.test(h)) return "PKZIP";
+  if (/\$RAR3\$/.test(h)) return "rar";
+  if (/\$rar5\$/.test(h)) return "RAR5";
   return null;
 }
 
@@ -124,19 +124,37 @@ export async function crackJohn(hash, { wordlist, formato } = {}) {
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }
 
-/** Extrae el hash de un archivo con el *2john correspondiente. Requiere John. */
+// Dir con los *2john (Debian: /usr/share/john; local: el run/ de John jumbo).
+const JOHN_RUN = process.env.JOHN_RUN || "";
+
+// Corre el extractor por su nombre, probando: binario en PATH → .exe/.py/.pl en JOHN_RUN.
+async function correExtractor(base, file) {
+  const intentos = [[base, [file]]];
+  if (JOHN_RUN) intentos.push(
+    [join(JOHN_RUN, base + ".exe"), [file]],
+    ["python", [join(JOHN_RUN, base + ".py"), file]],
+    ["perl", [join(JOHN_RUN, base + ".pl"), file]]);
+  for (const [cmd, args] of intentos) {
+    const r = await corre(cmd, args, { timeoutMs: 60000 });
+    if (!r.noExiste && r.out.includes("$")) return r.out;
+  }
+  return null;
+}
+
+/** Extrae el hash de un archivo con el *2john correspondiente. Requiere el extractor de John. */
 export async function extraerHash(buf, familia, nombre = "archivo") {
-  const ext = EXTRACTOR[familia];
-  if (!ext) { const e = new Error(`Sin extractor para ${familia}.`); e.code = "no-aplica"; throw e; }
+  const base = EXTRACTOR[familia];
+  if (!base) { const e = new Error(`Sin extractor para ${familia}.`); e.code = "no-aplica"; throw e; }
   const dir = mkdtempSync(join(tmpdir(), "gu-"));
   try {
-    const f = join(dir, nombre.replace(/[^\w.\-]/g, "_") || "archivo");
+    const f = join(dir, (nombre || "archivo").replace(/[^\w.\-]/g, "_") || "archivo");
     writeFileSync(f, buf);
-    const r = await corre(ext, [f], { timeoutMs: 60000 });
-    if (r.noExiste) { const e = new Error(`No está instalado ${ext} (imagen full).`); e.code = "sin-binario"; throw e; }
-    const hash = r.out.split(/\r?\n/).find((l) => l.includes("$")) || "";
-    if (!hash) { const e = new Error("No se pudo extraer el hash del archivo."); e.code = "no-aplica"; throw e; }
-    return hash.includes(":") ? hash.slice(hash.indexOf(":") + 1).trim() : hash.trim();
+    const out = await correExtractor(base, f);
+    if (out == null) { const e = new Error(`No está disponible ${base} (imagen full o JOHN_RUN).`); e.code = "sin-binario"; throw e; }
+    const linea = out.split(/\r?\n/).find((l) => l.includes("$"));
+    if (!linea) { const e = new Error("No se pudo extraer el hash del archivo."); e.code = "no-aplica"; throw e; }
+    // Devolvemos la línea COMPLETA (con el label "archivo:"): varios formatos de John lo necesitan.
+    return linea.trim();
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }
 

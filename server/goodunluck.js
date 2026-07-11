@@ -11,7 +11,7 @@ import { analizarOffice, quitarProteccionOffice, descifrarOffice, recuperarClave
 import { analizarPdf, quitarPermisosPdf, descifrarPdf } from "../unlock-core/pdf.js";
 import { inspeccionarZip } from "../unlock-core/archive.js";
 import { parseAgile, hashOffice, decryptAgile } from "../unlock-core/office-agile.js";
-import { capacidades as capsNativas, crackJohn } from "../unlock-core/crack-native.js";
+import { capacidades as capsNativas, crackJohn, extraerHash } from "../unlock-core/crack-native.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Rutas resueltas en runtime (el env puede fijarse antes de usarlas: Docker, tests).
@@ -159,7 +159,6 @@ export function crearJobRecuperacion(buf, name, { wordlist, motivo, propiedad, u
   if (sg.requireOwnership && !propiedad) { const e = new Error("Falta declarar la propiedad del archivo."); e.code = "propiedad"; throw e; }
   if (!config().cracking.enabled) { const e = new Error("La recuperación de clave (Tier 3) está desactivada por el superadmin."); e.code = "no-aplica"; throw e; }
   if (!cap.tiers.includes(3) || !puedeFormato(cap, familia)) { const e = new Error(`Tu rol (${rol}) no está autorizado a recuperar claves de ${familia}.`); e.code = "autorizacion"; throw e; }
-  if (familia !== "office") { const e = new Error(`La recuperación para ${familia} (hashcat/John) llega en la próxima fase.`); e.code = "no-aplica"; throw e; }
   if (!wordlist?.length) { const e = new Error("Falta la wordlist."); e.code = "wordlist"; throw e; }
 
   const id = `job_${++_jobSeq}_${Date.now().toString(36)}`;
@@ -168,22 +167,30 @@ export function crearJobRecuperacion(buf, name, { wordlist, motivo, propiedad, u
   const base = { ts: new Date().toISOString(), usuario: rol, rol, archivo: name || "(sin nombre)", hash: hash(buf), familia, tier: 3, motivo: motivo || "" };
   queueMicrotask(async () => {
     try {
-      let password, archivo;
+      let password, archivo = null;
       const caps = await capsNativas();
       if (familia === "office" && caps.john) {
-        // Motor nativo (John, CPU): construimos el hash desde los parámetros agile (sin office2john).
+        // Motor nativo (John, CPU): el hash $office$ se arma de los parámetros agile (sin office2john).
         job.motor = "john";
-        const parsed = parseAgile(buf);
-        const { password: pw } = await crackJohn(hashOffice(parsed), { wordlist });
+        const { password: pw } = await crackJohn(hashOffice(parseAgile(buf)), { wordlist });
         if (!pw) { const e = new Error("No se recuperó la clave con esa wordlist."); e.code = "no-encontrada"; throw e; }
         password = pw; archivo = Buffer.from(decryptAgile(buf, pw));
-      } else {
+      } else if (familia === "office") {
         // Diccionario en JS puro (sin binarios). Con progreso.
         job.motor = "js";
         const r = recuperarClaveOffice(buf, wordlist, name, (i) => { job.progreso = i; });
         password = r.password; archivo = r.archivo;
+      } else if (caps.john) {
+        // PDF/ZIP/RAR: extractor *2john → John. Devuelve la clave; el PDF además se descifra.
+        job.motor = "john";
+        const { password: pw } = await crackJohn(await extraerHash(buf, familia, name), { wordlist });
+        if (!pw) { const e = new Error("No se recuperó la clave con esa wordlist."); e.code = "no-encontrada"; throw e; }
+        password = pw;
+        if (familia === "pdf") archivo = (await descifrarPdf(buf, pw)).archivo;
+      } else {
+        const e = new Error(`La recuperación de ${familia} necesita John/hashcat (imagen full o JOHN_BIN).`); e.code = "sin-binario"; throw e;
       }
-      Object.assign(job, { estado: "ok", progreso: job.total, password, archivo, nombreSalida: nombreSalida(name, familia) });
+      Object.assign(job, { estado: "ok", progreso: job.total, password, archivo, nombreSalida: archivo ? nombreSalida(name, familia) : null });
       auditar({ ...base, resultado: "ok", motor: job.motor, claveRecuperada: true });
     } catch (e) {
       Object.assign(job, { estado: "error", error: e.message, code: e.code });
@@ -202,7 +209,7 @@ export function estadoJob(id) {
 /** El archivo recuperado de un job terminado OK (para la descarga). */
 export function archivoJob(id) {
   const j = _jobs.get(id);
-  return j && j.estado === "ok" ? { archivo: j.archivo, nombreSalida: j.nombreSalida } : null;
+  return j && j.estado === "ok" && j.archivo ? { archivo: j.archivo, nombreSalida: j.nombreSalida } : null;
 }
 
 function nombreSalida(name = "documento", familia) {

@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseAgile, hashOffice } from "../unlock-core/office-agile.js";
-import { capacidades, crackJohn, formatoJohn } from "../unlock-core/crack-native.js";
+import { capacidades, crackJohn, formatoJohn, extraerHash } from "../unlock-core/crack-native.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const fx = (f) => readFileSync(join(HERE, "..", "fixtures", "unlock", f));
@@ -32,6 +32,12 @@ if (!caps.john) {
   await test("John: recupera la clave 'secreto' del Excel cifrado (CPU, sin OpenCL)", async () => {
     const hash = hashOffice(parseAgile(fx("excel-cifrado.xlsx")));
     const r = await crackJohn(hash, { wordlist: ["hola", "1234", "secreto", "otra"] });
+    assert.equal(r.password, "secreto");
+  });
+
+  await test("John: recupera la clave de un ZIP cifrado (AES) vía zip2john", async () => {
+    const hash = await extraerHash(fx("zip-cifrado.zip"), "zip", "zip-cifrado.zip");
+    const r = await crackJohn(hash, { wordlist: ["hola", "secreto", "otra"] });
     assert.equal(r.password, "secreto");
   });
 }
