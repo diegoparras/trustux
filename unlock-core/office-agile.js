@@ -106,6 +106,19 @@ function descifrarPaquete(parsed, password) {
   return Buffer.concat(partes).subarray(0, totalSize);
 }
 
+/**
+ * Construye el hash `$office$` (formato John/hashcat) desde los parámetros agile, sin depender del
+ * extractor office2john. Sirve para pasarle un Office cifrado a John/hashcat (Tier 3 nativo).
+ * El verifier hash value va truncado a 32 bytes (lo que esperan ambos).
+ */
+export function hashOffice(parsed) {
+  const { ek } = parsed;
+  const ver = ek.hashAlgorithm === "SHA512" ? 2013 : (ek.spinCount >= 100000 ? 2010 : 2007);
+  const hx = (b) => Buffer.from(b).toString("hex");
+  const vhv = Buffer.from(ek.encryptedVerifierHashValue).subarray(0, 32);
+  return `$office$*${ver}*${ek.spinCount}*${ek.keyBits}*${ek.saltValue.length}*${hx(ek.saltValue)}*${hx(ek.encryptedVerifierHashInput)}*${hx(vhv)}`;
+}
+
 /** Tier 2: descifra un Office cifrado (agile) con la clave. Devuelve el OOXML en claro. */
 export function decryptAgile(fileBytes, password) {
   const parsed = parseAgile(fileBytes);

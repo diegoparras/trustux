@@ -10,6 +10,8 @@ import { createHash } from "node:crypto";
 import { analizarOffice, quitarProteccionOffice, descifrarOffice, recuperarClaveOffice } from "../unlock-core/office.js";
 import { analizarPdf, quitarPermisosPdf, descifrarPdf } from "../unlock-core/pdf.js";
 import { inspeccionarZip } from "../unlock-core/archive.js";
+import { parseAgile, hashOffice, decryptAgile } from "../unlock-core/office-agile.js";
+import { capacidades as capsNativas, crackJohn } from "../unlock-core/crack-native.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Rutas resueltas en runtime (el env puede fijarse antes de usarlas: Docker, tests).
@@ -164,11 +166,25 @@ export function crearJobRecuperacion(buf, name, { wordlist, motivo, propiedad, u
   const job = { id, estado: "corriendo", progreso: 0, total: wordlist.length, familia, rol };
   _jobs.set(id, job);
   const base = { ts: new Date().toISOString(), usuario: rol, rol, archivo: name || "(sin nombre)", hash: hash(buf), familia, tier: 3, motivo: motivo || "" };
-  queueMicrotask(() => {
+  queueMicrotask(async () => {
     try {
-      const r = recuperarClaveOffice(buf, wordlist, name, (i) => { job.progreso = i; });
-      Object.assign(job, { estado: "ok", progreso: job.total, password: r.password, archivo: r.archivo, nombreSalida: nombreSalida(name, familia) });
-      auditar({ ...base, resultado: "ok", claveRecuperada: true });
+      let password, archivo;
+      const caps = await capsNativas();
+      if (familia === "office" && caps.john) {
+        // Motor nativo (John, CPU): construimos el hash desde los parámetros agile (sin office2john).
+        job.motor = "john";
+        const parsed = parseAgile(buf);
+        const { password: pw } = await crackJohn(hashOffice(parsed), { wordlist });
+        if (!pw) { const e = new Error("No se recuperó la clave con esa wordlist."); e.code = "no-encontrada"; throw e; }
+        password = pw; archivo = Buffer.from(decryptAgile(buf, pw));
+      } else {
+        // Diccionario en JS puro (sin binarios). Con progreso.
+        job.motor = "js";
+        const r = recuperarClaveOffice(buf, wordlist, name, (i) => { job.progreso = i; });
+        password = r.password; archivo = r.archivo;
+      }
+      Object.assign(job, { estado: "ok", progreso: job.total, password, archivo, nombreSalida: nombreSalida(name, familia) });
+      auditar({ ...base, resultado: "ok", motor: job.motor, claveRecuperada: true });
     } catch (e) {
       Object.assign(job, { estado: "error", error: e.message, code: e.code });
       auditar({ ...base, resultado: "error", error: e.code || e.message });

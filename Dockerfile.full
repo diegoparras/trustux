@@ -1,0 +1,40 @@
+# Dockerfile.full — Trustux con el Tier 3 nativo (recuperación de clave por diccionario/fuerza
+# bruta). Suma John the Ripper (CPU), hashcat (+ pocl para OpenCL en CPU si no hay GPU), qpdf,
+# 7-Zip, unar y bkcrack (ZipCrypto por texto conocido). La imagen base (Dockerfile) queda liviana;
+# esta es opt-in para quien quiere el cracking. El app detecta los binarios por PATH.
+FROM node:22-bookworm-slim
+
+WORKDIR /app
+
+# Herramientas de recuperación (OSS). pocl = OpenCL en CPU para hashcat sin GPU.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      john qpdf p7zip-full unar \
+      hashcat pocl-opencl-icd \
+      cmake g++ git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# bkcrack (ataque de texto conocido sobre ZipCrypto) — se compila del fuente.
+RUN git clone --depth 1 https://github.com/kimci86/bkcrack /tmp/bkcrack \
+    && cmake -S /tmp/bkcrack -B /tmp/bkcrack/build -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build /tmp/bkcrack/build \
+    && cp /tmp/bkcrack/build/bkcrack /usr/local/bin/ \
+    && rm -rf /tmp/bkcrack
+
+# Deps de Node (producción).
+COPY package.json package-lock.json* ./
+RUN npm install --omit=dev --no-audit --no-fund
+
+# Código del motor + servidor + UI + trust store + módulo goodunluck.
+COPY firma-core ./firma-core
+COPY unlock-core ./unlock-core
+COPY server ./server
+COPY client ./client
+COPY public ./public
+COPY trust ./trust
+COPY config ./config
+
+# En Debian los *2john viven acá; los sumamos al PATH para extraer hashes (pdf/zip/rar).
+ENV PATH="/usr/share/john:${PATH}"
+ENV PORT=8095
+EXPOSE 8095
+CMD ["node", "server/index.js"]

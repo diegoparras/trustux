@@ -134,12 +134,17 @@ Motor por tiers (en `unlock-core/`):
   CRC-32 de un ZIP cifrado sin la clave, `archive.js`). Siempre funcionan.
 - **Tier 2 — descifrar con clave conocida:** PDF con `qpdf`; **Office cifrado (ECMA-376 Agile)** con
   `office-agile.js` (`node:crypto` + `cfb`), port de la implementación de GoodUnLock.
-- **Tier 3 — recuperar clave desconocida:** para **Office ya funciona por diccionario en JS puro**
-  (`recuperarClaveAgile`, reusa el mismo verificador); las llaves cortas garantizadas (Office 97-2003
-  y PDF RC4 de 40 bits) y el diccionario/fuerza bruta para ZIP/RAR/PDF moderno llegan con John/hashcat/
-  bkcrack (binarios nativos opcionales). Gateado por `cracking.enabled` (superadmin).
+- **Tier 3 — recuperar clave desconocida:** modelo de **jobs async** (submit → poll → download).
+  Motores: **diccionario en JS puro** para Office (`recuperarClaveAgile`, sin binarios) y
+  **John the Ripper / hashcat** (`crack-native.js`) para fuerza bruta/máscara y el resto de formatos.
+  Para Office el hash `$office$` se construye desde los parámetros agile (sin `office2john`).
+  `crack-native.js` mapea el hash a su modo de hashcat y marca las **llaves cortas garantizadas**
+  (Office 97-2003 y PDF RC4 de 40 bits). Los binarios son opcionales (imagen `Dockerfile.full` con
+  john/hashcat/qpdf/bkcrack); sin ellos, el diccionario de Office sigue andando. Gateado por
+  `cracking.enabled` (superadmin).
 
-Fixtures en `fixtures/unlock/` (`python scripts/gen_unlock_fixtures.py`).
+Fixtures en `fixtures/unlock/` (`python scripts/gen_unlock_fixtures.py`). Cracking nativo: imagen
+`Dockerfile.full`, o binarios en el PATH (o `JOHN_BIN`/`HASHCAT_BIN`).
 
 ## Licencia
 
