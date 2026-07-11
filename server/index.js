@@ -149,7 +149,8 @@ const server = http.createServer(async (req, res) => {
     if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end("forbidden"); }
     readFile(file, (err, data) => {
       if (err) { res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }); return res.end("not found"); }
-      if (path === "/" || path === "/index.html") {
+      // Reemplazo de tokens en toda página HTML (index + goodunluck + admin); inocuo si no los tiene.
+      if (extname(file) === ".html") {
         data = Buffer.from(data.toString("utf8").replace(/__TRUSTUX_VERSION__/g, VERSION).replace(/__AUTH_MODE__/g, AUTH), "utf8");
       }
       res.writeHead(200, {
