@@ -7,6 +7,7 @@
 // Tier 2 (con clave): un Office CIFRADO no es un ZIP sino un contenedor OLE/CFB (magic D0CF11E0);
 // ahí hace falta la contraseña — lo maneja officecrypto-tool (se cablea en la Fase 2).
 import JSZip from "jszip";
+import { decryptAgile, recuperarClaveAgile } from "./office-agile.js";
 
 // Elementos de protección no-criptográfica que se quitan sin clave (prefijo de namespace opcional).
 const PROT = ["sheetProtection", "workbookProtection", "documentProtection", "modifyVerifier", "writeProtection"];
@@ -59,6 +60,25 @@ export async function quitarProteccionOffice(buf, name) {
   }
   const archivo = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
   return { archivo, formato: formatoDe(name), quitadas };
+}
+
+/** Tier 2: descifra un Office cifrado con contraseña (ECMA-376 Agile). Devuelve el archivo en claro. */
+export function descifrarOffice(buf, password, name) {
+  if (!esOLE(buf)) {
+    const e = new Error("El archivo no está cifrado con contraseña (usá quitar-restricción)."); e.code = "no-aplica"; throw e;
+  }
+  if (!password) { const e = new Error("Falta la contraseña."); e.code = "clave"; throw e; }
+  const claro = Buffer.from(decryptAgile(buf, password));
+  return { archivo: claro, formato: formatoDe(name) };
+}
+
+/** Tier 3: recupera la clave de un Office cifrado probando una wordlist (diccionario, pure JS). */
+export function recuperarClaveOffice(buf, wordlist, name, onProgress) {
+  if (!esOLE(buf)) { const e = new Error("El archivo no está cifrado con contraseña."); e.code = "no-aplica"; throw e; }
+  if (!wordlist?.length) { const e = new Error("Falta la wordlist (diccionario de candidatas)."); e.code = "wordlist"; throw e; }
+  const r = recuperarClaveAgile(buf, wordlist, onProgress);
+  if (!r) { const e = new Error("No se recuperó la clave con esa wordlist."); e.code = "no-encontrada"; throw e; }
+  return { archivo: Buffer.from(r.archivo), formato: formatoDe(name), password: r.password };
 }
 
 // Partes XML donde pueden vivir las protecciones (evita content-types y rels).

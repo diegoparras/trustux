@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, mkdirSync, appendFileSync, existsSync } fr
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { analizarOffice, quitarProteccionOffice } from "../unlock-core/office.js";
+import { analizarOffice, quitarProteccionOffice, descifrarOffice, recuperarClaveOffice } from "../unlock-core/office.js";
 import { analizarPdf, quitarPermisosPdf, descifrarPdf } from "../unlock-core/pdf.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -102,7 +102,7 @@ export async function analizar(buf, name, usuario) {
 }
 
 // ---- Desbloquear: ejecuta Tier 1 (restricción) o Tier 2 (con clave). Devuelve el archivo. ----
-export async function desbloquear(buf, name, { tier, password, motivo, propiedad, usuario }) {
+export async function desbloquear(buf, name, { tier, password, wordlist, motivo, propiedad, usuario }) {
   const rol = rolDe(usuario);
   const cap = capacidades(rol);
   const { familia } = detectar(buf, name);
@@ -126,10 +126,16 @@ export async function desbloquear(buf, name, { tier, password, motivo, propiedad
       else { const e = new Error("Tier 1 solo aplica a Office y PDF."); e.code = "no-aplica"; throw e; }
     } else if (tier === 2) {
       if (familia === "pdf") r = await descifrarPdf(buf, password);
-      else { const e = new Error("El descifrado de Office/ZIP/RAR con clave llega en la próxima fase."); e.code = "no-aplica"; throw e; }
-    } else { const e = new Error("La recuperación de clave (Tier 3) no está habilitada en este build."); e.code = "no-aplica"; throw e; }
-    auditar({ ...base, resultado: "ok", quitadas: r.quitadas || null });
-    return { archivo: r.archivo, nombreSalida: nombreSalida(name, familia) };
+      else if (familia === "office") r = descifrarOffice(buf, password, name);
+      else { const e = new Error("El descifrado de ZIP/RAR con clave llega en la próxima fase."); e.code = "no-aplica"; throw e; }
+    } else if (tier === 3) {
+      if (!config().cracking.enabled) { const e = new Error("La recuperación de clave (Tier 3) está desactivada por el superadmin."); e.code = "no-aplica"; throw e; }
+      if (familia === "office") r = recuperarClaveOffice(buf, wordlist, name);
+      else { const e = new Error(`La recuperación de clave para ${familia} (John/hashcat) llega en la próxima fase.`); e.code = "no-aplica"; throw e; }
+    } else { const e = new Error("Tier no soportado."); e.code = "no-aplica"; throw e; }
+    // La auditoría registra que se recuperó una clave, nunca la clave en sí.
+    auditar({ ...base, resultado: "ok", quitadas: r.quitadas || null, claveRecuperada: r.password ? true : undefined });
+    return { archivo: r.archivo, nombreSalida: nombreSalida(name, familia), password: r.password };
   } catch (e) {
     auditar({ ...base, resultado: "error", error: e.code || e.message });
     throw e;

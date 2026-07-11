@@ -61,20 +61,18 @@ pdf_base().save(OUT / "pdf-clave.pdf",
                 encryption=pikepdf.Encryption(owner="ownerpass", user="abrime"))
 print("  pdf-clave.pdf  (user-password 'abrime': Tier 2)")
 
-# --- Excel cifrado (Tier 2), best-effort: requiere msoffcrypto-tool para escribir el cifrado ---
+# --- Excel CIFRADO con clave (Tier 2): cifrado agile ECMA-376, clave "secreto" ---
 try:
-    import io, msoffcrypto  # noqa
-    # msoffcrypto encripta; si no está, se omite (Tier 2 se prueba igual con el PDF con clave).
+    import io
+    from msoffcrypto.format.ooxml import OOXMLFile
     plain = io.BytesIO()
-    wb2 = Workbook(); wb2.active["A1"] = "secreto 1000"; wb2.save(plain); plain.seek(0)
-    enc = io.BytesIO()
-    off = msoffcrypto.OfficeFile(plain)
-    # msoffcrypto-tool encripta desde 5.x con encrypt(); si la API difiere, se omite.
-    if hasattr(off, "encrypt"):
-        off.encrypt("secreto", enc)
-        (OUT / "excel-cifrado.xlsx").write_bytes(enc.getvalue())
-        print("  excel-cifrado.xlsx  (clave 'secreto', Tier 2)")
+    wb2 = Workbook(); ws2 = wb2.active
+    ws2["A1"] = "Concepto"; ws2["B1"] = "Importe"; ws2["A2"] = "Total activo"; ws2["B2"] = 1000000
+    wb2.save(plain); plain.seek(0)
+    enc = io.BytesIO(); OOXMLFile(plain).encrypt("secreto", enc)
+    (OUT / "excel-cifrado.xlsx").write_bytes(enc.getvalue())
+    print("  excel-cifrado.xlsx  (cifrado agile, clave 'secreto', Tier 2)")
 except Exception as e:
-    print(f"  excel-cifrado.xlsx  OMITIDO ({type(e).__name__})")
+    print(f"  excel-cifrado.xlsx  OMITIDO ({type(e).__name__}: {e})")
 
 print("Listo.")

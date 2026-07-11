@@ -115,7 +115,7 @@ la app en Lockatus). El login va por OIDC (Authorization Code + PKCE); apagado n
 ```bash
 npm install
 npm run verificar      # verifica los PDFs de fixtures/ y muestra el veredicto
-npm test               # PAdES (8) + XAdES (3) + CAdES (3) + OCSP (4) + standalone (6) + goodunluck (9)
+npm test               # PAdES (8) + XAdES (3) + CAdES (3) + OCSP (4) + standalone (6) + goodunluck (15)
 ```
 
 ## Módulo goodunluck — recuperar archivos protegidos
@@ -127,11 +127,16 @@ archivos propios, 100% local, con motivo + declaración de propiedad obligatorio
 append-only, y una **matriz rol→capacidad que edita el superadmin** (`config/goodunluck.json`) —
 nada sensible abierto por defecto.
 
-Motor por tiers: **Tier 1** quita restricciones sin clave (protección de hoja/edición de Office
-vía `jszip`; permisos/owner-password de PDF vía qpdf-wasm); **Tier 2** descifra con clave conocida;
-**Tier 3** (recuperación de clave por diccionario/fuerza bruta con John/hashcat) llega en una fase
-posterior, gateada y con binarios nativos opcionales. Fase 1 (Tiers 1-2 Office/PDF) implementada y
-testeada. Fixtures en `fixtures/unlock/` (`python scripts/gen_unlock_fixtures.py`).
+Motor por tiers (en `unlock-core/`):
+- **Tier 1 — quitar restricciones sin clave:** protección de hoja/edición de Office (edita el OOXML
+  con `jszip`) y permisos/owner-password de PDF (`qpdf` en WASM).
+- **Tier 2 — descifrar con clave conocida:** PDF con `qpdf`; **Office cifrado (ECMA-376 Agile)** con
+  `office-agile.js` (`node:crypto` + `cfb`), port de la implementación de GoodUnLock.
+- **Tier 3 — recuperar clave desconocida:** para **Office ya funciona por diccionario en JS puro**
+  (`recuperarClaveAgile`, reusa el mismo verificador); PDF/ZIP/RAR por diccionario/fuerza bruta con
+  John/hashcat llegan con binarios nativos opcionales. Gateado por `cracking.enabled` (superadmin).
+
+Fixtures en `fixtures/unlock/` (`python scripts/gen_unlock_fixtures.py`).
 
 ## Licencia
 

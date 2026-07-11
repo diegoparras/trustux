@@ -9,7 +9,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const TMP = join(HERE, "_gu-cfg");
 process.env.GOODUNLUCK_CONFIG_DIR = TMP;   // rutas lazy → basta fijarlo antes de llamar
 
-const { analizar, desbloquear, auditoria } = await import("../server/goodunluck.js");
+const { analizar, desbloquear, auditoria, guardarConfig } = await import("../server/goodunluck.js");
 const JSZip = (await import("jszip")).default;
 
 const fx = (f) => readFileSync(join(HERE, "..", "fixtures", "unlock", f));
@@ -54,6 +54,24 @@ await test("PDF Tier 2: descifra con la clave de apertura conocida", async () =>
   assert.ok(!r.archivo.includes(Buffer.from("/Encrypt")));
 });
 
+await test("Excel cifrado: analizar detecta cifrado y acción descifrar-con-clave", async () => {
+  const a = await analizar(fx("excel-cifrado.xlsx"), "excel-cifrado.xlsx");
+  assert.equal(a.familia, "office");
+  assert.equal(a.cifrado, true);
+  assert.ok(a.acciones.includes("descifrar-con-clave"));
+});
+
+await test("Excel cifrado Tier 2: descifra con la clave 'secreto' (tu decryptAgile)", async () => {
+  const r = await desbloquear(fx("excel-cifrado.xlsx"), "excel-cifrado.xlsx", { tier: 2, password: "secreto", ...ok });
+  const z = await JSZip.loadAsync(r.archivo);
+  assert.ok(z.file("xl/workbook.xml"), "el descifrado debe dar un OOXML válido");
+});
+
+await test("Excel cifrado Tier 2: clave incorrecta → error de clave", async () => {
+  await assert.rejects(() => desbloquear(fx("excel-cifrado.xlsx"), "x.xlsx", { tier: 2, password: "malo", ...ok }),
+    (e) => e.code === "clave");
+});
+
 await test("PDF Tier 2: clave incorrecta → error de clave", async () => {
   await assert.rejects(() => desbloquear(fx("pdf-clave.pdf"), "x.pdf", { tier: 2, password: "malo", ...ok }),
     (e) => e.code === "clave");
@@ -69,9 +87,28 @@ await test("Autorización: rol 'agente' no puede PDF Tier 2", async () => {
     (e) => e.code === "autorizacion");
 });
 
+await test("Tier 3: gateado — con cracking apagado, se rechaza", async () => {
+  await assert.rejects(() => desbloquear(fx("excel-cifrado.xlsx"), "x.xlsx", { tier: 3, wordlist: ["secreto"], ...ok }),
+    (e) => e.code === "no-aplica");
+});
+
+await test("Tier 3: recupera la clave Office por diccionario (cracking habilitado)", async () => {
+  guardarConfig({ cracking: { enabled: true, maxJobMinutes: 120 } });
+  const r = await desbloquear(fx("excel-cifrado.xlsx"), "excel-cifrado.xlsx",
+    { tier: 3, wordlist: ["hola", "1234", "secreto", "otra"], ...ok });
+  assert.equal(r.password, "secreto");
+  const z = await JSZip.loadAsync(r.archivo);
+  assert.ok(z.file("xl/workbook.xml"));
+});
+
+await test("Tier 3: wordlist sin la clave → no-encontrada", async () => {
+  await assert.rejects(() => desbloquear(fx("excel-cifrado.xlsx"), "x.xlsx", { tier: 3, wordlist: ["a", "b", "c"], ...ok }),
+    (e) => e.code === "no-encontrada");
+});
+
 await test("Auditoría: registra las operaciones", () => {
   assert.ok(auditoria().length >= 4);
 });
 
-console.log(`\n${pasados}/9 OK`);
+console.log(`\n${pasados}/15 OK`);
 rmSync(TMP, { recursive: true, force: true });
