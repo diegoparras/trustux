@@ -144,6 +144,51 @@ export async function desbloquear(buf, name, { tier, password, wordlist, motivo,
   }
 }
 
+// ---- Jobs de recuperación de clave (Tier 3, asíncronos) --------------------------------------
+// Modelo submit → poll → download, como los recuperadores comerciales. Hoy el backend es el
+// diccionario de Office (JS puro); hashcat/John se enchufan acá mismo en la fase con binarios.
+const _jobs = new Map();
+let _jobSeq = 0;
+
+export function crearJobRecuperacion(buf, name, { wordlist, motivo, propiedad, usuario }) {
+  const rol = rolDe(usuario), cap = capacidades(rol), sg = config().safeguards;
+  const { familia } = detectar(buf, name);
+  if (sg.requireReason && !String(motivo || "").trim()) { const e = new Error("Falta el motivo."); e.code = "motivo"; throw e; }
+  if (sg.requireOwnership && !propiedad) { const e = new Error("Falta declarar la propiedad del archivo."); e.code = "propiedad"; throw e; }
+  if (!config().cracking.enabled) { const e = new Error("La recuperación de clave (Tier 3) está desactivada por el superadmin."); e.code = "no-aplica"; throw e; }
+  if (!cap.tiers.includes(3) || !puedeFormato(cap, familia)) { const e = new Error(`Tu rol (${rol}) no está autorizado a recuperar claves de ${familia}.`); e.code = "autorizacion"; throw e; }
+  if (familia !== "office") { const e = new Error(`La recuperación para ${familia} (hashcat/John) llega en la próxima fase.`); e.code = "no-aplica"; throw e; }
+  if (!wordlist?.length) { const e = new Error("Falta la wordlist."); e.code = "wordlist"; throw e; }
+
+  const id = `job_${++_jobSeq}_${Date.now().toString(36)}`;
+  const job = { id, estado: "corriendo", progreso: 0, total: wordlist.length, familia, rol };
+  _jobs.set(id, job);
+  const base = { ts: new Date().toISOString(), usuario: rol, rol, archivo: name || "(sin nombre)", hash: hash(buf), familia, tier: 3, motivo: motivo || "" };
+  queueMicrotask(() => {
+    try {
+      const r = recuperarClaveOffice(buf, wordlist, name, (i) => { job.progreso = i; });
+      Object.assign(job, { estado: "ok", progreso: job.total, password: r.password, archivo: r.archivo, nombreSalida: nombreSalida(name, familia) });
+      auditar({ ...base, resultado: "ok", claveRecuperada: true });
+    } catch (e) {
+      Object.assign(job, { estado: "error", error: e.message, code: e.code });
+      auditar({ ...base, resultado: "error", error: e.code || e.message });
+    }
+  });
+  return { id };
+}
+
+/** Estado del job (sin el archivo binario). */
+export function estadoJob(id) {
+  const j = _jobs.get(id);
+  if (!j) return null;
+  return { id: j.id, estado: j.estado, progreso: j.progreso, total: j.total, password: j.password || null, nombreSalida: j.nombreSalida || null, error: j.error || null };
+}
+/** El archivo recuperado de un job terminado OK (para la descarga). */
+export function archivoJob(id) {
+  const j = _jobs.get(id);
+  return j && j.estado === "ok" ? { archivo: j.archivo, nombreSalida: j.nombreSalida } : null;
+}
+
 function nombreSalida(name = "documento", familia) {
   const m = String(name).match(/^(.*?)(\.[a-z0-9]+)?$/i);
   const stem = (m && m[1]) || "documento";

@@ -9,7 +9,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const TMP = join(HERE, "_gu-cfg");
 process.env.GOODUNLUCK_CONFIG_DIR = TMP;   // rutas lazy → basta fijarlo antes de llamar
 
-const { analizar, desbloquear, auditoria, guardarConfig } = await import("../server/goodunluck.js");
+const { analizar, desbloquear, auditoria, guardarConfig, crearJobRecuperacion, estadoJob, archivoJob } = await import("../server/goodunluck.js");
 const JSZip = (await import("jszip")).default;
 const CFB = await import("cfb");
 
@@ -120,6 +120,17 @@ await test("Tier 3: wordlist sin la clave → no-encontrada", async () => {
     (e) => e.code === "no-encontrada");
 });
 
+await test("Tier 3 job async: submit → poll → recupera la clave y deja el archivo", async () => {
+  const { id } = crearJobRecuperacion(fx("excel-cifrado.xlsx"), "excel-cifrado.xlsx",
+    { wordlist: ["hola", "secreto", "otra"], ...ok });
+  let est;
+  for (let i = 0; i < 50 && (est = estadoJob(id)).estado === "corriendo"; i++) await new Promise((r) => setTimeout(r, 20));
+  assert.equal(est.estado, "ok");
+  assert.equal(est.password, "secreto");
+  const dl = archivoJob(id);
+  assert.ok(dl && dl.archivo.length > 0);
+});
+
 await test("ZIP cifrado: fuga de metadatos — nombres visibles sin la clave", async () => {
   const a = await analizar(fx("zip-cifrado.zip"), "zip-cifrado.zip");
   assert.equal(a.familia, "zip");
@@ -134,5 +145,5 @@ await test("Auditoría: registra las operaciones", () => {
   assert.ok(auditoria().length >= 4);
 });
 
-console.log(`\n${pasados}/17 OK`);
+console.log(`\n${pasados}/18 OK`);
 rmSync(TMP, { recursive: true, force: true });

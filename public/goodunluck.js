@@ -58,7 +58,8 @@ function renderPanel(a) {
       : "Formato de archivo comprimido.";
   const puedeT1 = a.acciones.includes("quitar-restriccion");
   const puedeT2 = a.acciones.includes("descifrar-con-clave");
-  if (!puedeT1 && !puedeT2) {
+  const puedeT3 = a.acciones.includes("recuperar-clave");
+  if (!puedeT1 && !puedeT2 && !puedeT3) {
     return `<div class="gu-card"><div class="gu-top">${ICO.open}<strong>${esc(FAMILIA[a.familia] || a.familia)}</strong></div>
       <p class="gu-desc">${esc(desc)}</p>
       <p class="hint">Tu rol (${esc(a.rol)}) no tiene una acción disponible para este archivo${a.familia === "office" && a.cifrado ? " (requiere descifrar con clave, no habilitado para tu rol)" : ""}.</p></div>`;
@@ -77,6 +78,12 @@ function renderPanel(a) {
         ${puedeT1 ? `<button id="gu-t1" class="btn">Quitar restricción</button>` : ""}
         ${puedeT2 ? `<button id="gu-t2" class="btn ${puedeT1 ? "ghost" : ""}">Descifrar con clave</button>` : ""}
       </div>
+      ${puedeT3 ? `<div class="gu-t3">
+        <label class="gu-lbl">Recuperar la clave por diccionario (una palabra por línea)</label>
+        <textarea id="gu-wordlist" rows="3" placeholder="palabra1&#10;palabra2&#10;..."></textarea>
+        <button id="gu-t3-btn" class="btn ghost">Recuperar clave</button>
+        <div id="gu-t3-prog" class="hint"></div>
+      </div>` : ""}
       <div id="gu-out" class="gu-out"></div>
     </div></div>`;
 }
@@ -84,9 +91,46 @@ function renderPanel(a) {
 function cablearAcciones() {
   const eye = $("#gu-pass-eye");
   if (eye) eye.onclick = () => { const i = $("#gu-pass"); i.type = i.type === "password" ? "text" : "password"; };
-  const t1 = $("#gu-t1"), t2 = $("#gu-t2");
+  const t1 = $("#gu-t1"), t2 = $("#gu-t2"), t3 = $("#gu-t3-btn");
   if (t1) t1.onclick = () => desbloquear(1);
   if (t2) t2.onclick = () => desbloquear(2);
+  if (t3) t3.onclick = () => recuperar();
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function recuperar() {
+  const out = $("#gu-out"), prog = $("#gu-t3-prog");
+  const wordlist = ($("#gu-wordlist")?.value || "").trim();
+  if (!wordlist) { out.innerHTML = `<p class="hint error">Pegá una lista de candidatas.</p>`; return; }
+  const motivo = $("#gu-motivo")?.value || "", propiedad = $("#gu-propiedad")?.checked;
+  out.innerHTML = ""; prog.textContent = "Enviando…";
+  try {
+    const r = await fetch("/api/goodunluck/crack", { method: "POST", body: bytes, headers: {
+      "Content-Type": "application/octet-stream", "X-Filename": encodeURIComponent(archivo.name),
+      "X-Wordlist": encodeURIComponent(wordlist), "X-Motivo": encodeURIComponent(motivo), "X-Propiedad": propiedad ? "1" : "0" } });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `Error ${r.status}`);
+    await poll(data.jobId, prog, out);
+  } catch (e) { prog.textContent = ""; out.innerHTML = `<p class="hint error">${esc(e.message)}</p>`; }
+}
+
+async function poll(id, prog, out) {
+  for (let i = 0; i < 100000; i++) {
+    const est = await fetch(`/api/goodunluck/job/${id}`).then((r) => r.json()).catch(() => null);
+    if (!est) { prog.textContent = ""; out.innerHTML = `<p class="hint error">Se perdió el job.</p>`; return; }
+    if (est.estado === "corriendo") { prog.textContent = `Probando ${est.progreso}/${est.total}…`; await sleep(400); continue; }
+    prog.textContent = "";
+    if (est.estado === "ok") {
+      const blob = await fetch(`/api/goodunluck/job/${id}/archivo`).then((r) => r.blob());
+      const nombre = est.nombreSalida || "recuperado";
+      descargar(blob, nombre);
+      out.innerHTML = `<p class="ok-line">${ICO.open}<span>Clave recuperada: <strong>${esc(est.password)}</strong>. Se descargó <strong>${esc(nombre)}</strong>.</span></p>`;
+    } else {
+      out.innerHTML = `<p class="hint error">${esc(est.error || "No se recuperó la clave con esa lista.")}</p>`;
+    }
+    return;
+  }
 }
 
 async function desbloquear(tier) {

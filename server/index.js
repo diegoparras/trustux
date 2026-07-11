@@ -105,6 +105,34 @@ const server = http.createServer(async (req, res) => {
           return json(res, map[e.code] || 422, { error: e.message, code: e.code });
         }
       }
+      // Tier 3 (recuperación de clave): job async. El archivo va en el body; la wordlist en X-Wordlist.
+      if (path === "/api/goodunluck/crack" && m === "POST") {
+        let buf; try { buf = await readRaw(req); } catch (e) { return json(res, 413, { error: e.message }); }
+        if (!buf.length) return json(res, 400, { error: "Archivo vacío." });
+        const wordlist = h("x-wordlist").split("\n").map((s) => s.trim()).filter(Boolean);
+        try {
+          const { id } = gu.crearJobRecuperacion(buf, h("x-filename"), {
+            wordlist, motivo: h("x-motivo"), propiedad: h("x-propiedad") === "1", usuario: u });
+          return json(res, 202, { jobId: id });
+        } catch (e) {
+          const map = { motivo: 400, propiedad: 400, autorizacion: 403, wordlist: 400 };
+          return json(res, map[e.code] || 422, { error: e.message, code: e.code });
+        }
+      }
+      if (path.startsWith("/api/goodunluck/job/") && m === "GET") {
+        const resto = path.slice("/api/goodunluck/job/".length);
+        const id = resto.replace(/\/archivo$/, "");
+        if (resto.endsWith("/archivo")) {
+          const dl = gu.archivoJob(id);
+          if (!dl) return json(res, 404, { error: "job sin archivo (no terminó o no existe)." });
+          res.writeHead(200, { "Content-Type": "application/octet-stream",
+            "Content-Disposition": `attachment; filename="${dl.nombreSalida.replace(/[^\w.\-]/g, "_")}"`,
+            "X-Filename": encodeURIComponent(dl.nombreSalida) });
+          return res.end(dl.archivo);
+        }
+        const est = gu.estadoJob(id);
+        return est ? json(res, 200, est) : json(res, 404, { error: "job no encontrado." });
+      }
       return json(res, 404, { error: "ruta goodunluck no encontrada" });
     }
 
