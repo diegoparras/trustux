@@ -1,0 +1,11 @@
+node_modules
+.git
+.claude
+test
+fixtures
+scripts
+*.md
+Dockerfile*
+.dockerignore
+config/goodunluck-audit.jsonl
+config/jobs
