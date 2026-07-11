@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseAgile, hashOffice } from "../unlock-core/office-agile.js";
-import { capacidades, crackJohn, formatoJohn, extraerHash } from "../unlock-core/crack-native.js";
+import { capacidades, crackJohn, formatoJohn, extraerHash, modoHashcat } from "../unlock-core/crack-native.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const fx = (f) => readFileSync(join(HERE, "..", "fixtures", "unlock", f));
@@ -39,6 +39,21 @@ if (!caps.john) {
     const hash = await extraerHash(fx("zip-cifrado.zip"), "zip", "zip-cifrado.zip");
     const r = await crackJohn(hash, { wordlist: ["hola", "secreto", "otra"] });
     assert.equal(r.password, "secreto");
+  });
+
+  await test("John: recupera la clave de un PDF cifrado vía pdf2john", async () => {
+    const hash = await extraerHash(fx("pdf-clave.pdf"), "pdf", "pdf-clave.pdf");
+    const r = await crackJohn(hash, { wordlist: ["hola", "abrime", "otra"] });
+    assert.equal(r.password, "abrime");
+  });
+
+  await test("PDF RC4 40-bit: se detecta como puerta GARANTIZADA y se recupera", async () => {
+    const hash = await extraerHash(fx("pdf-rc4.pdf"), "pdf", "pdf-rc4.pdf");
+    const info = modoHashcat(hash.slice(hash.indexOf("$")));   // el hash sin el label "x:"
+    assert.equal(info.modo, 10400);
+    assert.equal(info.garantizado, true);
+    const r = await crackJohn(hash, { wordlist: ["hola", "abrime", "otra"] });
+    assert.equal(r.password, "abrime");
   });
 }
 

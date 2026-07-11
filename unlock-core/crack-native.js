@@ -153,8 +153,9 @@ export async function extraerHash(buf, familia, nombre = "archivo") {
     if (out == null) { const e = new Error(`No está disponible ${base} (imagen full o JOHN_RUN).`); e.code = "sin-binario"; throw e; }
     const linea = out.split(/\r?\n/).find((l) => l.includes("$"));
     if (!linea) { const e = new Error("No se pudo extraer el hash del archivo."); e.code = "no-aplica"; throw e; }
-    // Devolvemos la línea COMPLETA (con el label "archivo:"): varios formatos de John lo necesitan.
-    return linea.trim();
+    // Reescribimos con un label limpio "x:" + el hash. John necesita un label para ZIP/RAR/PDF, pero
+    // el que pone el *2john trae la ruta del archivo (con ':' de la unidad en Windows) y rompe el split.
+    return "x:" + linea.slice(linea.indexOf("$")).trim();
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }
 

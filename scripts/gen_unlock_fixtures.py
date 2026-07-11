@@ -61,6 +61,11 @@ pdf_base().save(OUT / "pdf-clave.pdf",
                 encryption=pikepdf.Encryption(owner="ownerpass", user="abrime"))
 print("  pdf-clave.pdf  (user-password 'abrime': Tier 2)")
 
+# PDF con RC4 de 40 bits (R2): la llave corta = puerta GARANTIZADA (Tier 3).
+pdf_base().save(OUT / "pdf-rc4.pdf",
+                encryption=pikepdf.Encryption(owner="o", user="abrime", R=2, aes=False, metadata=False))
+print("  pdf-rc4.pdf  (RC4 40-bit, clave 'abrime': puerta garantizada de 40 bits)")
+
 # --- Excel CIFRADO con clave (Tier 2): cifrado agile ECMA-376, clave "secreto" ---
 try:
     import io
