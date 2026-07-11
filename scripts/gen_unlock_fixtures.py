@@ -75,4 +75,15 @@ try:
 except Exception as e:
     print(f"  excel-cifrado.xlsx  OMITIDO ({type(e).__name__}: {e})")
 
+# --- ZIP cifrado (AES): el índice (nombres) queda visible sin clave = fuga de metadatos ---
+try:
+    import pyzipper
+    with pyzipper.AESZipFile(OUT / "zip-cifrado.zip", "w", compression=pyzipper.ZIP_DEFLATED, encryption=pyzipper.WZ_AES) as z:
+        z.setpassword(b"secreto")
+        z.writestr("balance-secreto.txt", b"Total activo: 1000000")
+        z.writestr("nomina/sueldos.csv", b"empleado,sueldo\nperez,500000")
+    print("  zip-cifrado.zip  (AES clave 'secreto'; nombres visibles sin clave)")
+except Exception as e:
+    print(f"  zip-cifrado.zip  OMITIDO ({type(e).__name__})")
+
 print("Listo.")

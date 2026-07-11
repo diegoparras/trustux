@@ -8,6 +8,7 @@
 // ahí hace falta la contraseña — lo maneja officecrypto-tool (se cablea en la Fase 2).
 import JSZip from "jszip";
 import { decryptAgile, recuperarClaveAgile } from "./office-agile.js";
+import { tieneVbaProtegido, quitarVbaDeZip } from "./vba.js";
 
 // Elementos de protección no-criptográfica que se quitan sin clave (prefijo de namespace opcional).
 const PROT = ["sheetProtection", "workbookProtection", "documentProtection", "modifyVerifier", "writeProtection"];
@@ -34,6 +35,7 @@ export async function analizarOffice(buf, name) {
     const xml = await zip.file(nombre).async("string");
     for (const tag of PROT) if (reDe(tag).test(xml)) protecciones.push({ tag, parte: nombre });
   }
+  if (await tieneVbaProtegido(zip)) protecciones.push({ tag: "vbaProject", parte: "xl/vbaProject.bin" });
   return { familia: "office", formato, cifrado: false, protecciones };
 }
 
@@ -55,6 +57,8 @@ export async function quitarProteccionOffice(buf, name) {
     }
     if (cambiado) zip.file(nombre, xml);
   }
+  // También levanta el sello del proyecto VBA (atajo estructural, sin clave).
+  quitadas.push(...(await quitarVbaDeZip(zip)));
   if (!quitadas.length) {
     const e = new Error("El archivo no tenía restricciones para quitar."); e.code = "sin-proteccion"; throw e;
   }

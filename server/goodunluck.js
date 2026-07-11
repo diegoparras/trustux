@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { analizarOffice, quitarProteccionOffice, descifrarOffice, recuperarClaveOffice } from "../unlock-core/office.js";
 import { analizarPdf, quitarPermisosPdf, descifrarPdf } from "../unlock-core/pdf.js";
+import { inspeccionarZip } from "../unlock-core/archive.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Rutas resueltas en runtime (el env puede fijarse antes de usarlas: Docker, tests).
@@ -89,6 +90,7 @@ export async function analizar(buf, name, usuario) {
   let detalle = { familia, cifrado: false, protecciones: [] };
   if (familia === "office") detalle = await analizarOffice(buf, name);
   else if (familia === "pdf") detalle = await analizarPdf(buf);
+  else if (familia === "zip") { try { detalle = inspeccionarZip(buf); } catch { /* zip ilegible */ } }
   // Acciones que este rol podría ejecutar sobre este archivo.
   const acciones = [];
   const permitido = (tier) => cap.tiers.includes(tier) && puedeFormato(cap, familia);

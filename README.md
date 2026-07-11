@@ -115,7 +115,7 @@ la app en Lockatus). El login va por OIDC (Authorization Code + PKCE); apagado n
 ```bash
 npm install
 npm run verificar      # verifica los PDFs de fixtures/ y muestra el veredicto
-npm test               # PAdES (8) + XAdES (3) + CAdES (3) + OCSP (4) + standalone (6) + goodunluck (15)
+npm test               # PAdES (8) + XAdES (3) + CAdES (3) + OCSP (4) + standalone (6) + goodunluck (17)
 ```
 
 ## Módulo goodunluck — recuperar archivos protegidos
@@ -128,13 +128,16 @@ append-only, y una **matriz rol→capacidad que edita el superadmin** (`config/g
 nada sensible abierto por defecto.
 
 Motor por tiers (en `unlock-core/`):
-- **Tier 1 — quitar restricciones sin clave:** protección de hoja/edición de Office (edita el OOXML
-  con `jszip`) y permisos/owner-password de PDF (`qpdf` en WASM).
+- **Atajos garantizados (estructural, sin clave):** protección de hoja/edición de Office (`jszip`),
+  permisos/owner-password de PDF (`qpdf` WASM), **contraseña del proyecto VBA** (borra CMG/DPB/GC del
+  stream PROJECT en `vbaProject.bin`, `vba.js`) y **fuga de metadatos del ZIP** (lista nombres/tamaños/
+  CRC-32 de un ZIP cifrado sin la clave, `archive.js`). Siempre funcionan.
 - **Tier 2 — descifrar con clave conocida:** PDF con `qpdf`; **Office cifrado (ECMA-376 Agile)** con
   `office-agile.js` (`node:crypto` + `cfb`), port de la implementación de GoodUnLock.
 - **Tier 3 — recuperar clave desconocida:** para **Office ya funciona por diccionario en JS puro**
-  (`recuperarClaveAgile`, reusa el mismo verificador); PDF/ZIP/RAR por diccionario/fuerza bruta con
-  John/hashcat llegan con binarios nativos opcionales. Gateado por `cracking.enabled` (superadmin).
+  (`recuperarClaveAgile`, reusa el mismo verificador); las llaves cortas garantizadas (Office 97-2003
+  y PDF RC4 de 40 bits) y el diccionario/fuerza bruta para ZIP/RAR/PDF moderno llegan con John/hashcat/
+  bkcrack (binarios nativos opcionales). Gateado por `cracking.enabled` (superadmin).
 
 Fixtures en `fixtures/unlock/` (`python scripts/gen_unlock_fixtures.py`).
 

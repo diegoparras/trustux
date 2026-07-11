@@ -11,6 +11,7 @@ process.env.GOODUNLUCK_CONFIG_DIR = TMP;   // rutas lazy → basta fijarlo antes
 
 const { analizar, desbloquear, auditoria, guardarConfig } = await import("../server/goodunluck.js");
 const JSZip = (await import("jszip")).default;
+const CFB = await import("cfb");
 
 const fx = (f) => readFileSync(join(HERE, "..", "fixtures", "unlock", f));
 const ok = { motivo: "recuperar balance de la organización", propiedad: true };
@@ -42,6 +43,19 @@ await test("Word Tier 1: quita restrict-editing (documentProtection)", async () 
   const r = await desbloquear(fx("word-restringido.docx"), "word-restringido.docx", { tier: 1, ...ok });
   const z = await JSZip.loadAsync(r.archivo);
   assert.ok(!(await z.file("word/settings.xml").async("string")).includes("documentProtection"));
+});
+
+await test("VBA: quitar-restricción levanta el sello del proyecto VBA (CMG/DPB/GC)", async () => {
+  const cfb = CFB.utils.cfb_new();
+  CFB.utils.cfb_add(cfb, "/PROJECT", Buffer.from('ID="{X}"\r\nCMG="AA"\r\nDPB="BB"\r\nGC="CC"\r\n[Host Extender Info]\r\n', "latin1"));
+  const z = new JSZip();
+  z.file("[Content_Types].xml", "<Types/>"); z.file("xl/workbook.xml", "<workbook/>");
+  z.file("xl/vbaProject.bin", CFB.write(cfb, { type: "buffer" }));
+  const xlsm = await z.generateAsync({ type: "nodebuffer" });
+  const r = await desbloquear(xlsm, "libro.xlsm", { tier: 1, ...ok });
+  const c2 = CFB.read(await (await JSZip.loadAsync(r.archivo)).file("xl/vbaProject.bin").async("nodebuffer"), { type: "buffer" });
+  const idx = c2.FullPaths.findIndex((p) => p.split("/").pop() === "PROJECT");
+  assert.ok(!/(CMG|DPB|GC)=/i.test(Buffer.from(c2.FileIndex[idx].content).toString("latin1")));
 });
 
 await test("PDF Tier 1: quita permisos (owner-password) sin la clave", async () => {
@@ -106,9 +120,19 @@ await test("Tier 3: wordlist sin la clave → no-encontrada", async () => {
     (e) => e.code === "no-encontrada");
 });
 
+await test("ZIP cifrado: fuga de metadatos — nombres visibles sin la clave", async () => {
+  const a = await analizar(fx("zip-cifrado.zip"), "zip-cifrado.zip");
+  assert.equal(a.familia, "zip");
+  assert.equal(a.cifrado, true);
+  const nombres = a.entradas.map((e) => e.nombre);
+  assert.ok(nombres.includes("balance-secreto.txt"));
+  assert.ok(nombres.includes("nomina/sueldos.csv"));
+  assert.ok(a.entradas.every((e) => e.crc32));   // CRC-32 de cada archivo, expuesto
+});
+
 await test("Auditoría: registra las operaciones", () => {
   assert.ok(auditoria().length >= 4);
 });
 
-console.log(`\n${pasados}/15 OK`);
+console.log(`\n${pasados}/17 OK`);
 rmSync(TMP, { recursive: true, force: true });
