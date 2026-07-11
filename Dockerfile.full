@@ -28,11 +28,12 @@ RUN git clone --depth 1 https://github.com/openwall/john /opt/john \
     && make -s -j"$(nproc)" \
     && rm -rf /opt/john/.git
 
-# bkcrack (ataque de texto conocido sobre ZipCrypto) — se compila del fuente.
+# bkcrack (ataque de texto conocido sobre ZipCrypto) — se compila del fuente. El binario cambia de
+# ubicación entre versiones (build/ raíz vs build/src/cli/), así que se localiza con find.
 RUN git clone --depth 1 https://github.com/kimci86/bkcrack /tmp/bkcrack \
     && cmake -S /tmp/bkcrack -B /tmp/bkcrack/build -DCMAKE_BUILD_TYPE=Release \
     && cmake --build /tmp/bkcrack/build \
-    && cp /tmp/bkcrack/build/bkcrack /usr/local/bin/ \
+    && cp "$(find /tmp/bkcrack/build -name bkcrack -type f -executable | head -1)" /usr/local/bin/bkcrack \
     && rm -rf /tmp/bkcrack
 
 # Deps de Node (producción).
