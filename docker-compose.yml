@@ -1,17 +1,29 @@
 services:
   trustux:
-    build: .
-    image: ghcr.io/diegoparras/trustux
+    # Imagen FULL: incluye el Tier 3 nativo (John jumbo, hashcat, bkcrack, qpdf, 7z).
+    # Para la variante liviana sin cracking, cambiá dockerfile a "Dockerfile".
+    build:
+      context: .
+      dockerfile: Dockerfile.full
+    image: ghcr.io/diegoparras/trustux:full
     ports:
       - "8095:8095"
     environment:
-      # Federación con Lockatus (SSO de la suite). Por defecto "local" → sin login, single-user.
+      # Federación con Lockatus (SSO de la suite). "federado" = los usuarios entran con Lockatus
+      # y su ROL (agente/auditor/admin/superadmin) sale del token → la matriz rol×capacidad aplica.
+      # "local" = sin login, single-user (rol admin). Default local para no romper nada.
       AUTH_MODE: ${AUTH_MODE:-local}
       LOCKATUS_ISSUER: ${LOCKATUS_ISSUER:-http://localhost:8081}
       CLIENT_ID: ${CLIENT_ID:-trustux}
       REDIRECT_URI: ${REDIRECT_URI:-http://localhost:8095/callback}
-      TRUSTUX_SECRET: ${TRUSTUX_SECRET:-cambiar-en-produccion}
-    # El trust store es editable sin rebuild: montá tus raíces reales acá.
+      # OBLIGATORIO en producción: clave para firmar la cookie de sesión.
+      #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      TRUSTUX_SECRET: ${TRUSTUX_SECRET:?definí TRUSTUX_SECRET en .env para producción}
     volumes:
+      # Trust store (raíces reales), editable sin rebuild.
       - ./trust:/app/trust:ro
+      # PERSISTENCIA CRÍTICA: la matriz de roles que edita el superadmin (goodunluck.json) y la
+      # auditoría append-only (goodunluck-audit.jsonl) viven acá. Sin este volumen se pierden en
+      # cada redeploy — y la auditoría es la evidencia de uso legítimo.
+      - ./config:/app/config
     restart: unless-stopped

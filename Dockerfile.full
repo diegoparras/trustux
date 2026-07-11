@@ -56,4 +56,7 @@ ENV JOHN_RUN=/opt/john/run
 ENV PATH="/opt/john/run:${PATH}"
 ENV PORT=8095
 EXPOSE 8095
+# Salud: /api/me responde siempre 200 (no expone datos sensibles).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8095)+'/api/me').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "server/index.js"]
