@@ -75,6 +75,11 @@ const server = http.createServer(async (req, res) => {
       const u = usuario(req);
       const rol = (u && u.role) || "";
       if (path === "/api/goodunluck/estado" && m === "GET") return json(res, 200, gu.estado());
+      if (path === "/api/goodunluck/config" && m === "PUT") {
+        if (lk && !["admin", "superadmin"].includes(rol)) return json(res, 403, { error: "Solo admin/superadmin." });
+        let b; try { b = JSON.parse((await readRaw(req, 1e6)).toString() || "{}"); } catch { b = {}; }
+        return json(res, 200, gu.guardarConfig(b));
+      }
       if (path === "/api/goodunluck/audit" && m === "GET") {
         if (lk && !["admin", "superadmin", "auditor"].includes(rol)) return json(res, 403, { error: "Solo admin/auditor." });
         return json(res, 200, { audit: gu.auditoria() });
@@ -137,7 +142,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     // --- Estático (solo public/) ---
-    const pagina = path === "/" ? "/index.html" : path === "/goodunluck" ? "/goodunluck.html" : path;
+    const pagina = path === "/" ? "/index.html"
+      : path === "/goodunluck" ? "/goodunluck.html"
+      : path === "/goodunluck-admin" ? "/goodunluck-admin.html" : path;
     const file = normalize(join(PUBLIC, pagina));
     if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end("forbidden"); }
     readFile(file, (err, data) => {

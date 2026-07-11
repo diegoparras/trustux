@@ -30,6 +30,18 @@
 .gu-badge.b-mut { color: var(--muted); background: var(--card-2); }
 :root[data-theme="dark"] .gu-badge.b-ok { color: #7fe0aa; }
 :root[data-theme="dark"] .gu-badge.b-warn { color: #f0c675; }
+/* ---- Página de administración ---- */
+.gu-adm { margin-top: 16px; }
+.gu-h { font-size: 16px; margin: 0 0 4px; }
+.gu-tablewrap { overflow-x: auto; margin-top: 10px; }
+.gu-matrix { width: 100%; border-collapse: collapse; font-size: 13px; }
+.gu-matrix th, .gu-matrix td { padding: 8px 10px; border-bottom: 1px solid var(--hairline); text-align: left; vertical-align: top; }
+.gu-matrix thead th { color: var(--muted); font-weight: 500; white-space: nowrap; }
+.gu-matrix th[scope="row"] { font-weight: 500; text-transform: capitalize; }
+.th-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+.gu-fmts { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.gu-f { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; white-space: nowrap; }
+.gu-sw { display: flex; align-items: center; gap: 9px; font-size: 14px; margin: 6px 0; }
 .gu-t3 { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline); display: grid; gap: 8px; }
 .gu-wl-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .btn.small { padding: 5px 11px; font-size: 13px; }
