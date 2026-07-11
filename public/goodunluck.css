@@ -1,0 +1,30 @@
+/* goodunluck.css — estilos propios de la página de recuperación. Reusa tokens de escriba-ui.css
+   y el acento Trustux de styles.css. Sin glow, sin emojis. */
+
+.gu-panel { margin-top: 18px; display: grid; gap: 12px; }
+.gu-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+.gu-top { display: flex; align-items: center; gap: 9px; font-size: 16px; }
+.gu-top .ico { width: 20px; height: 20px; color: var(--accent); }
+.gu-desc { color: var(--muted); font-size: 14px; margin: 8px 0 12px; }
+
+.gu-form { display: grid; gap: 8px; }
+.gu-lbl { font-size: 13px; color: var(--text); font-weight: 500; margin-top: 4px; }
+.gu-form textarea, .gu-form input[type="password"], .gu-form input[type="text"] {
+  width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: var(--card-2); color: var(--text); font: inherit; font-size: 14px; resize: vertical;
+}
+.gu-form textarea:focus, .gu-form input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+.gu-check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.gu-check input { margin-top: 2px; flex: 0 0 auto; }
+
+.pass-wrap { position: relative; display: flex; align-items: center; }
+.pass-wrap > input { flex: 1 1 auto; padding-right: 40px; }
+.pass-toggle { position: absolute; right: 6px; width: 28px; height: 28px; display: grid; place-items: center;
+  background: none; border: 0; border-radius: var(--radius-md); color: var(--muted); cursor: pointer; }
+.pass-toggle:hover { color: var(--text); }
+
+.gu-actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.gu-out { margin-top: 6px; }
+.ok-line { display: flex; align-items: center; gap: 8px; color: var(--ok); font-size: 14px; }
+.ok-line .ico { width: 18px; height: 18px; }
+.gu-desc + .hint, .gu-out .hint { font-size: 13px; }

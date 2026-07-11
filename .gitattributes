@@ -6,3 +6,9 @@
 *.p7s binary
 *.der binary
 *.crl binary
+*.xlsx binary
+*.docx binary
+*.pptx binary
+*.xls binary
+*.doc binary
+*.ppt binary

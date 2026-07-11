@@ -21,3 +21,6 @@ Thumbs.db
 
 # Config local (no commitear)
 .env
+config/goodunluck-audit.jsonl
+config/jobs/
+test/_gu-cfg/

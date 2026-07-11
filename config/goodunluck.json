@@ -1,0 +1,10 @@
+{
+  "roles": {
+    "agente":     { "tiers": [1],       "formatos": ["office", "pdf"] },
+    "auditor":    { "tiers": [1, 2],    "formatos": ["*"] },
+    "admin":      { "tiers": [1, 2, 3], "formatos": ["*"] },
+    "superadmin": { "tiers": [1, 2, 3], "formatos": ["*"] }
+  },
+  "safeguards": { "requireReason": true, "requireOwnership": true, "audit": true },
+  "cracking": { "enabled": false, "maxJobMinutes": 120 }
+}

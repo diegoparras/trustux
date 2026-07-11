@@ -7,6 +7,7 @@ import { readFile, readFileSync as readSync } from "node:fs";
 import { extname, join, normalize, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { verificarDocumento, trustInfo } from "./verificar.js";
+import * as gu from "./goodunluck.js";
 import { createLockatusClient } from "../client/lockatus-client.mjs";
 
 const ROOT = normalize(join(dirname(fileURLToPath(import.meta.url)), ".."));
@@ -68,8 +69,48 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // --- goodunluck: recuperación de archivos protegidos (responsable, gateado) ---
+    if (path.startsWith("/api/goodunluck/")) {
+      if (lk && !lk.getUser(req)) return json(res, 401, { error: "Iniciá sesión para usar goodunluck." });
+      const u = usuario(req);
+      const rol = (u && u.role) || "";
+      if (path === "/api/goodunluck/estado" && m === "GET") return json(res, 200, gu.estado());
+      if (path === "/api/goodunluck/audit" && m === "GET") {
+        if (lk && !["admin", "superadmin", "auditor"].includes(rol)) return json(res, 403, { error: "Solo admin/auditor." });
+        return json(res, 200, { audit: gu.auditoria() });
+      }
+      const h = (k) => { try { return decodeURIComponent(req.headers[k] || ""); } catch { return req.headers[k] || ""; } };
+      if (path === "/api/goodunluck/analizar" && m === "POST") {
+        let buf; try { buf = await readRaw(req); } catch (e) { return json(res, 413, { error: e.message }); }
+        if (!buf.length) return json(res, 400, { error: "Archivo vacío." });
+        try { return json(res, 200, await gu.analizar(buf, h("x-filename"), u)); }
+        catch (e) { return json(res, e.code === "formato" ? 415 : 422, { error: e.message }); }
+      }
+      if (path === "/api/goodunluck/desbloquear" && m === "POST") {
+        let buf; try { buf = await readRaw(req); } catch (e) { return json(res, 413, { error: e.message }); }
+        if (!buf.length) return json(res, 400, { error: "Archivo vacío." });
+        try {
+          const r = await gu.desbloquear(buf, h("x-filename"), {
+            tier: Number(h("x-tier")) || 1, password: h("x-password"),
+            motivo: h("x-motivo"), propiedad: h("x-propiedad") === "1", usuario: u,
+          });
+          res.writeHead(200, {
+            "Content-Type": "application/octet-stream",
+            "Content-Disposition": `attachment; filename="${r.nombreSalida.replace(/[^\w.\-]/g, "_")}"`,
+            "X-Filename": encodeURIComponent(r.nombreSalida), "X-Content-Type-Options": "nosniff",
+          });
+          return res.end(r.archivo);
+        } catch (e) {
+          const map = { motivo: 400, propiedad: 400, autorizacion: 403, formato: 415 };
+          return json(res, map[e.code] || 422, { error: e.message, code: e.code });
+        }
+      }
+      return json(res, 404, { error: "ruta goodunluck no encontrada" });
+    }
+
     // --- Estático (solo public/) ---
-    const file = normalize(join(PUBLIC, path === "/" ? "/index.html" : path));
+    const pagina = path === "/" ? "/index.html" : path === "/goodunluck" ? "/goodunluck.html" : path;
+    const file = normalize(join(PUBLIC, pagina));
     if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end("forbidden"); }
     readFile(file, (err, data) => {
       if (err) { res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }); return res.end("not found"); }

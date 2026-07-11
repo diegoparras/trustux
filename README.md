@@ -115,8 +115,23 @@ la app en Lockatus). El login va por OIDC (Authorization Code + PKCE); apagado n
 ```bash
 npm install
 npm run verificar      # verifica los PDFs de fixtures/ y muestra el veredicto
-npm test               # PAdES (8) + XAdES (3) + CAdES (3) + OCSP (4) + standalone (6)
+npm test               # PAdES (8) + XAdES (3) + CAdES (3) + OCSP (4) + standalone (6) + goodunluck (9)
 ```
+
+## Módulo goodunluck — recuperar archivos protegidos
+
+Segunda herramienta de Trustux (página `/goodunluck`): recuperación **local y auditada** del acceso
+a archivos **propios** de la organización que quedaron con contraseña o restricciones (p. ej. un
+empleado que bloquea una planilla). Es dual-use, así que el diseño es responsable: recuperación de
+archivos propios, 100% local, con motivo + declaración de propiedad obligatorios, auditoría
+append-only, y una **matriz rol→capacidad que edita el superadmin** (`config/goodunluck.json`) —
+nada sensible abierto por defecto.
+
+Motor por tiers: **Tier 1** quita restricciones sin clave (protección de hoja/edición de Office
+vía `jszip`; permisos/owner-password de PDF vía qpdf-wasm); **Tier 2** descifra con clave conocida;
+**Tier 3** (recuperación de clave por diccionario/fuerza bruta con John/hashcat) llega en una fase
+posterior, gateada y con binarios nativos opcionales. Fase 1 (Tiers 1-2 Office/PDF) implementada y
+testeada. Fixtures en `fixtures/unlock/` (`python scripts/gen_unlock_fixtures.py`).
 
 ## Licencia
 

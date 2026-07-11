@@ -6,12 +6,14 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev --no-audit --no-fund
 
-# Código del motor + servidor + UI + trust store.
+# Código del motor + servidor + UI + trust store + módulo goodunluck.
 COPY firma-core ./firma-core
+COPY unlock-core ./unlock-core
 COPY server ./server
 COPY client ./client
 COPY public ./public
 COPY trust ./trust
+COPY config ./config
 
 ENV PORT=8095
 EXPOSE 8095
