@@ -15,6 +15,35 @@ const ICO = {
 };
 const ICO_EYE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
 const FAMILIA = { office: "Documento Office", pdf: "PDF", zip: "Archivo ZIP", rar: "Archivo RAR" };
+const PROT_LABEL = {
+  sheetProtection: "protección de hoja", workbookProtection: "protección de estructura",
+  documentProtection: "restricción de edición", writeProtection: "solo lectura",
+  modifyVerifier: "protección de modificación", vbaProject: "contraseña de macros VBA",
+};
+const fmtBytes = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + " MB" : n >= 1e3 ? Math.round(n / 1e3) + " KB" : (n || 0) + " B";
+
+// Resumen legible de lo detectado, por familia.
+function resumen(a) {
+  if (a.familia === "office") {
+    if (a.cifrado) return "Está cifrado con contraseña (hace falta la clave o recuperarla).";
+    const p = (a.protecciones || []).map((x) => PROT_LABEL[x.tag] || x.tag);
+    return p.length ? "Tiene: " + [...new Set(p)].join(", ") + "." : "No tiene restricciones.";
+  }
+  if (a.familia === "pdf") return a.cifrado
+    ? (a.rc4_40 ? "Cifrado RC4 de 40 bits (llave corta)." : "Cifrado o con permisos bloqueados.")
+    : "No tiene protección.";
+  if (a.familia === "zip") return `Archivo ZIP con ${a.total || 0} elemento(s)${a.cifrado ? ", cifrado" : ""}.`;
+  return "Archivo comprimido.";
+}
+
+// Listado del contenido del ZIP (visible sin la clave = fuga de metadatos).
+function listadoZip(a) {
+  const filas = (a.entradas || []).filter((e) => !e.dir).slice(0, 60)
+    .map((e) => `<tr><td>${esc(e.nombre)}</td><td>${fmtBytes(e.tamano)}</td><td>${e.cifrado ? "cifrado" : "abierto"}</td></tr>`).join("");
+  if (!filas) return "";
+  return `<div class="gu-ziplist"><div class="dz-sub">Contenido visible sin la clave:</div>
+    <div class="gu-tablewrap"><table class="gu-matrix"><thead><tr><th>Nombre</th><th>Tamaño</th><th>Estado</th></tr></thead><tbody>${filas}</tbody></table></div></div>`;
+}
 
 async function init() {
   montarChrome();
@@ -51,11 +80,8 @@ async function elegir(file) {
 }
 
 function renderPanel(a) {
-  const desc = a.familia === "pdf"
-    ? (a.cifrado ? "Está cifrado o con permisos bloqueados." : "No tiene protección.")
-    : a.familia === "office"
-      ? (a.cifrado ? "Está cifrado con contraseña (hace falta la clave)." : (a.protecciones?.length ? "Tiene restricciones de edición/hoja." : "No tiene restricciones."))
-      : "Formato de archivo comprimido.";
+  const desc = resumen(a);
+  const lista = listadoZip(a);
   const puedeT1 = a.acciones.includes("quitar-restriccion");
   const puedeT2 = a.acciones.includes("descifrar-con-clave");
   const puedeT3 = a.acciones.includes("recuperar-clave");
@@ -63,12 +89,12 @@ function renderPanel(a) {
   const badge = (n) => n ? `<span class="gu-badge ${n.tipo === "garantizada" || n.tipo === "instantanea" ? "b-ok" : n.tipo === "diccionario" ? "b-warn" : "b-mut"}">${esc(n.txt)}</span>` : "";
   if (!puedeT1 && !puedeT2 && !puedeT3) {
     return `<div class="gu-card"><div class="gu-top">${ICO.open}<strong>${esc(FAMILIA[a.familia] || a.familia)}</strong></div>
-      <p class="gu-desc">${esc(desc)}</p>
+      <p class="gu-desc">${esc(desc)}</p>${lista}
       <p class="hint">Tu rol (${esc(a.rol)}) no tiene una acción disponible para este archivo${a.familia === "office" && a.cifrado ? " (requiere descifrar con clave, no habilitado para tu rol)" : ""}.</p></div>`;
   }
   return `<div class="gu-card">
     <div class="gu-top">${ICO.lock}<strong>${esc(FAMILIA[a.familia] || a.familia)}</strong></div>
-    <p class="gu-desc">${esc(desc)}</p>
+    <p class="gu-desc">${esc(desc)}</p>${lista}
     <div class="gu-form">
       <label class="gu-lbl">Motivo de la recuperación</label>
       <textarea id="gu-motivo" rows="2" placeholder="Ej.: recuperar el balance que dejó bloqueado un empleado"></textarea>

@@ -50,3 +50,5 @@
 .ok-line { display: flex; align-items: center; gap: 8px; color: var(--ok); font-size: 14px; }
 .ok-line .ico { width: 18px; height: 18px; }
 .gu-desc + .hint, .gu-out .hint { font-size: 13px; }
+.gu-ziplist { margin: 8px 0 4px; }
+.gu-ziplist .gu-matrix { font-size: 12.5px; }
