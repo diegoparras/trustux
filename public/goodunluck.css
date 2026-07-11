@@ -23,6 +23,9 @@
   background: none; border: 0; border-radius: var(--radius-md); color: var(--muted); cursor: pointer; }
 .pass-toggle:hover { color: var(--text); }
 
+.gu-t3 { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline); display: grid; gap: 8px; }
+.gu-wl-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.btn.small { padding: 5px 11px; font-size: 13px; }
 .gu-actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
 .gu-out { margin-top: 6px; }
 .ok-line { display: flex; align-items: center; gap: 8px; color: var(--ok); font-size: 14px; }

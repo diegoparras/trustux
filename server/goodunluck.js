@@ -204,7 +204,7 @@ export function crearJobRecuperacion(buf, name, { wordlist, motivo, propiedad, u
 export function estadoJob(id) {
   const j = _jobs.get(id);
   if (!j) return null;
-  return { id: j.id, estado: j.estado, progreso: j.progreso, total: j.total, password: j.password || null, nombreSalida: j.nombreSalida || null, error: j.error || null };
+  return { id: j.id, estado: j.estado, progreso: j.progreso, total: j.total, motor: j.motor || null, password: j.password || null, nombreSalida: j.nombreSalida || null, error: j.error || null };
 }
 /** El archivo recuperado de un job terminado OK (para la descarga). */
 export function archivoJob(id) {

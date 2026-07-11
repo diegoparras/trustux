@@ -79,8 +79,13 @@ function renderPanel(a) {
         ${puedeT2 ? `<button id="gu-t2" class="btn ${puedeT1 ? "ghost" : ""}">Descifrar con clave</button>` : ""}
       </div>
       ${puedeT3 ? `<div class="gu-t3">
-        <label class="gu-lbl">Recuperar la clave por diccionario (una palabra por línea)</label>
+        <label class="gu-lbl">Recuperar la clave por diccionario (una palabra por línea, o subí un archivo)</label>
         <textarea id="gu-wordlist" rows="3" placeholder="palabra1&#10;palabra2&#10;..."></textarea>
+        <div class="gu-wl-row">
+          <button type="button" id="gu-wl-file" class="btn ghost small">Subir wordlist…</button>
+          <input type="file" id="gu-wl-input" accept=".txt,.lst,.dic,text/plain" hidden />
+          <span id="gu-wl-info" class="hint"></span>
+        </div>
         <button id="gu-t3-btn" class="btn ghost">Recuperar clave</button>
         <div id="gu-t3-prog" class="hint"></div>
       </div>` : ""}
@@ -95,6 +100,18 @@ function cablearAcciones() {
   if (t1) t1.onclick = () => desbloquear(1);
   if (t2) t2.onclick = () => desbloquear(2);
   if (t3) t3.onclick = () => recuperar();
+  // Subir una wordlist desde archivo → la carga en el textarea.
+  const wlBtn = $("#gu-wl-file"), wlInput = $("#gu-wl-input");
+  if (wlBtn && wlInput) {
+    wlBtn.onclick = () => wlInput.click();
+    wlInput.onchange = async () => {
+      const f = wlInput.files[0]; if (!f) return;
+      const txt = await f.text();
+      $("#gu-wordlist").value = txt;
+      const n = txt.split(/\r?\n/).filter((l) => l.trim()).length;
+      $("#gu-wl-info").textContent = `${esc(f.name)} · ${n.toLocaleString("es")} palabras`;
+    };
+  }
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -122,10 +139,14 @@ async function poll(id, prog, out) {
     if (est.estado === "corriendo") { prog.textContent = `Probando ${est.progreso}/${est.total}…`; await sleep(400); continue; }
     prog.textContent = "";
     if (est.estado === "ok") {
-      const blob = await fetch(`/api/goodunluck/job/${id}/archivo`).then((r) => r.blob());
-      const nombre = est.nombreSalida || "recuperado";
-      descargar(blob, nombre);
-      out.innerHTML = `<p class="ok-line">${ICO.open}<span>Clave recuperada: <strong>${esc(est.password)}</strong>. Se descargó <strong>${esc(nombre)}</strong>.</span></p>`;
+      const motor = est.motor === "john" ? "John" : est.motor === "js" ? "diccionario" : "";
+      let msg = `Clave recuperada: <strong>${esc(est.password)}</strong>${motor ? ` <span class="c-mut">(${motor})</span>` : ""}.`;
+      if (est.nombreSalida) {
+        const blob = await fetch(`/api/goodunluck/job/${id}/archivo`).then((r) => r.blob());
+        descargar(blob, est.nombreSalida);
+        msg += ` Se descargó <strong>${esc(est.nombreSalida)}</strong>.`;
+      }
+      out.innerHTML = `<p class="ok-line">${ICO.open}<span>${msg}</span></p>`;
     } else {
       out.innerHTML = `<p class="hint error">${esc(est.error || "No se recuperó la clave con esa lista.")}</p>`;
     }
