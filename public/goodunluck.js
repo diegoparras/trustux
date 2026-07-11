@@ -59,6 +59,8 @@ function renderPanel(a) {
   const puedeT1 = a.acciones.includes("quitar-restriccion");
   const puedeT2 = a.acciones.includes("descifrar-con-clave");
   const puedeT3 = a.acciones.includes("recuperar-clave");
+  const nat = a.naturaleza || {};
+  const badge = (n) => n ? `<span class="gu-badge ${n.tipo === "garantizada" || n.tipo === "instantanea" ? "b-ok" : n.tipo === "diccionario" ? "b-warn" : "b-mut"}">${esc(n.txt)}</span>` : "";
   if (!puedeT1 && !puedeT2 && !puedeT3) {
     return `<div class="gu-card"><div class="gu-top">${ICO.open}<strong>${esc(FAMILIA[a.familia] || a.familia)}</strong></div>
       <p class="gu-desc">${esc(desc)}</p>
@@ -74,12 +76,13 @@ function renderPanel(a) {
       ${puedeT2 ? `<label class="gu-lbl">Contraseña (si la conocés)</label>
         <div class="pass-wrap"><input type="password" id="gu-pass" placeholder="clave de apertura" />
         <button type="button" class="pass-toggle" id="gu-pass-eye" aria-label="Mostrar/ocultar">${ICO_EYE}</button></div>` : ""}
-      <div class="gu-actions">
-        ${puedeT1 ? `<button id="gu-t1" class="btn">Quitar restricción</button>` : ""}
-        ${puedeT2 ? `<button id="gu-t2" class="btn ${puedeT1 ? "ghost" : ""}">Descifrar con clave</button>` : ""}
-      </div>
+      ${(puedeT1 || puedeT2) ? `<div class="gu-actions">
+        ${puedeT1 ? `<span class="gu-act">${badge(nat["quitar-restriccion"])}<button id="gu-t1" class="btn">Quitar restricción</button></span>` : ""}
+        ${puedeT2 ? `<span class="gu-act">${badge(nat["descifrar-con-clave"])}<button id="gu-t2" class="btn ${puedeT1 ? "ghost" : ""}">Descifrar con clave</button></span>` : ""}
+      </div>` : ""}
       ${puedeT3 ? `<div class="gu-t3">
-        <label class="gu-lbl">Recuperar la clave por diccionario (una palabra por línea, o subí un archivo)</label>
+        <label class="gu-lbl">Recuperar la clave ${badge(nat["recuperar-clave"])}</label>
+        <span class="dz-sub">Pegá una lista de candidatas (una por línea) o subí un archivo.</span>
         <textarea id="gu-wordlist" rows="3" placeholder="palabra1&#10;palabra2&#10;..."></textarea>
         <div class="gu-wl-row">
           <button type="button" id="gu-wl-file" class="btn ghost small">Subir wordlist…</button>

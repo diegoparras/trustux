@@ -42,10 +42,14 @@ async function qpdf(args, entrada) {
 
 const esCifrado = (buf) => buf.includes(Buffer.from("/Encrypt"));
 
-/** Analiza un PDF sin modificarlo: ¿está cifrado? */
+/** Analiza un PDF sin modificarlo: ¿está cifrado? ¿es RC4 de 40 bits (llave corta = garantizado)? */
 export async function analizarPdf(buf) {
   if (buf.slice(0, 4).toString() !== "%PDF") { const e = new Error("No parece un PDF."); e.code = "formato"; throw e; }
-  return { familia: "pdf", cifrado: esCifrado(buf) };
+  const cifrado = esCifrado(buf);
+  // Revisión 2 del diccionario /Encrypt = RC4 de 40 bits → llave corta, recuperación garantizada.
+  const head = buf.slice(0, 4_000_000).toString("latin1");
+  const rc4_40 = cifrado && /\/R\s*2\b/.test(head);
+  return { familia: "pdf", cifrado, rc4_40 };
 }
 
 /** Tier 1: quita permisos / owner-password SIN la clave. Falla si el PDF pide clave de apertura. */

@@ -102,7 +102,15 @@ export async function analizar(buf, name, usuario) {
     if (permitido(2)) acciones.push("descifrar-con-clave");
   }
   if (permitido(3) && config().cracking.enabled) acciones.push("recuperar-clave");
-  return { rol, familia, ...detalle, acciones };
+  // Naturaleza de cada acción: garantizada/instantánea vs. best-effort. Guía la expectativa del usuario.
+  const garantizada40 = familia === "pdf" && detalle.rc4_40;
+  const naturaleza = {};
+  if (acciones.includes("quitar-restriccion")) naturaleza["quitar-restriccion"] = { tipo: "instantanea", txt: "Sin contraseña, al instante" };
+  if (acciones.includes("descifrar-con-clave")) naturaleza["descifrar-con-clave"] = { tipo: "con-clave", txt: "Necesita la contraseña" };
+  if (acciones.includes("recuperar-clave")) naturaleza["recuperar-clave"] = garantizada40
+    ? { tipo: "garantizada", txt: "Llave de 40 bits: recuperación garantizada" }
+    : { tipo: "diccionario", txt: "Prueba una lista de candidatas — no garantizado" };
+  return { rol, familia, ...detalle, acciones, naturaleza };
 }
 
 // ---- Desbloquear: ejecuta Tier 1 (restricción) o Tier 2 (con clave). Devuelve el archivo. ----

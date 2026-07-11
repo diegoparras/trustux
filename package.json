@@ -1,6 +1,6 @@
 {
   "name": "trustux",
-  "version": "0.7.3",
+  "version": "0.8.0",
   "description": "Trustux — verificación de firma digital 100% local (PAdES + XAdES), con UI web y SSO opcional via Lockatus. Parte de la Suite Escriba.",
   "type": "module",
   "license": "Apache-2.0",
