@@ -104,6 +104,17 @@ npm start              # http://localhost:8095  (subí un PDF o XML firmado)
 
 Con Docker: `docker compose up -d --build`.
 
+### Versión y novedades de cada deploy
+
+Cada `git push` a `main` publica las imágenes en GHCR (`:latest` y `:latest-full`) con GitHub
+Actions. Cada deploy sube el *patch* de la versión y suma su sección `## [X.Y.Z]` en el
+[CHANGELOG.md](CHANGELOG.md) (sin ella el build no sale). Esas notas se ven en tres lugares: lo
+**primero que escribe el contenedor al levantar** (en EasyPanel: servicio → Resumen → Registros) es
+un cartel con la versión, la fecha y qué cambia; en la **interfaz**, al entrar después de una
+actualización aparece una vez el aviso **Novedades** (el historial queda en el menú ⋮ y en
+**Acerca de → Qué cambió**); y en **GitHub**, las imágenes se etiquetan también `:X.Y.Z` y
+`:X.Y.Z-full` y se crea el Release `vX.Y.Z` con esas mismas notas.
+
 ### SSO opcional con Lockatus
 
 Por defecto Trustux es single-user (sin login). Para que los usuarios entren con el SSO de la
@@ -115,7 +126,7 @@ la app en Lockatus). El login va por OIDC (Authorization Code + PKCE); apagado n
 ```bash
 npm install
 npm run verificar      # verifica los PDFs de fixtures/ y muestra el veredicto
-npm test               # PAdES (8) + XAdES (3) + CAdES (3) + OCSP (4) + standalone (6) + goodunluck (18) + crack-native (9+John) + archive (3)
+npm test               # novedades (6) + PAdES (8) + XAdES (3) + CAdES (3) + OCSP (4) + standalone (6) + goodunluck (18) + crack-native (9+John) + archive (3)
 ```
 
 ## Módulo goodunluck — recuperar archivos protegidos

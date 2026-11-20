@@ -5,6 +5,7 @@ test
 fixtures
 scripts
 *.md
+!CHANGELOG.md
 Dockerfile*
 .dockerignore
 config/goodunluck-audit.jsonl

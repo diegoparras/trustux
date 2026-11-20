@@ -9,10 +9,14 @@ import { fileURLToPath } from "node:url";
 import { verificarDocumento, trustInfo } from "./verificar.js";
 import * as gu from "./goodunluck.js";
 import { createLockatusClient } from "../client/lockatus-client.mjs";
+import * as nov from "./novedades.js";
 
 const ROOT = normalize(join(dirname(fileURLToPath(import.meta.url)), ".."));
 const PUBLIC = join(ROOT, "public");
 const VERSION = (() => { try { return JSON.parse(readSync(join(ROOT, "package.json"), "utf8")).version || ""; } catch { return ""; } })();
+// Lo primero que se ve en los registros al levantar (deploy en EasyPanel): version y que cambia,
+// sacado del CHANGELOG.md. Nunca rompe el arranque: sin CHANGELOG avisa que no hay notas.
+try { for (const l of nov.cartelArranque(VERSION, nov.todas())) console.log(l); } catch { /* el cartel nunca frena el server */ }
 const PORT = Number(process.env.PORT) || 8095;
 
 // --- Federación opcional con Lockatus (SSO de la suite). Apagada por defecto. ---
@@ -55,6 +59,17 @@ const server = http.createServer(async (req, res) => {
     if (path === "/api/me") {
       const u = usuario(req);
       return json(res, 200, { auth: AUTH, autenticado: !!u, usuario: u && !u.local ? { email: u.email, role: u.role } : null, raices: trustInfo().length, version: VERSION });
+    }
+    // GET /api/novedades?desde=X.Y.Z  -> que cambio desde la ultima version vista (CHANGELOG)
+    // GET /api/novedades?todas=1      -> historial hasta la version instalada
+    if (path === "/api/novedades" && m === "GET") {
+      if (lk && !lk.getUser(req)) return json(res, 401, { error: "Iniciá sesión con Lockatus para ver las novedades." });
+      const q = new URL(req.url, "http://x").searchParams;
+      const vista = /^\d+\.\d+\.\d+$/.test(q.get("desde") || "") ? q.get("desde") : null;
+      const versiones = q.get("todas") === "1"
+        ? nov.todas().filter((x) => nov.comparar(x.version, VERSION) <= 0)
+        : nov.desde(nov.todas(), vista, VERSION);
+      return json(res, 200, { version: VERSION, versiones });
     }
     if (path === "/api/verificar" && m === "POST") {
       if (lk && !lk.getUser(req)) return json(res, 401, { error: "Iniciá sesión con Lockatus para verificar." });

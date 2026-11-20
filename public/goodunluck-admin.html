@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <script src="./theme-init.js?v=1"></script>
   <link rel="stylesheet" href="./escriba-ui.css?v=1" />
-  <link rel="stylesheet" href="./styles.css?v=2" />
+  <link rel="stylesheet" href="./styles.css?v=3" />
   <link rel="stylesheet" href="./goodunluck.css?v=4" />
 </head>
 <body>
@@ -27,6 +27,7 @@
         <a class="menu-item" href="/goodunluck"><span>Recuperar archivos</span></a>
         <a class="menu-item" href="/"><span>Verificación de firma</span></a>
         <button class="menu-item" id="btn-theme"><span>Tema claro / oscuro</span></button>
+        <button class="menu-item" id="btn-novedades"><span>Novedades</span></button>
         <button class="menu-item" id="btn-acerca"><span>Acerca de goodunluck</span></button>
         <div class="menu-sep" id="menu-sep-logout" hidden></div>
         <button class="menu-item" id="btn-logout" hidden><span>Cerrar sesión</span></button>
@@ -54,11 +55,11 @@
       <h2 class="modal-tit" id="about-tit">Acerca de goodunluck</h2>
       <div class="modal-cuerpo">
         <p>Módulo de Trustux para recuperar archivos <strong>propios</strong> protegidos. Local, auditado y gateado por rol.</p>
-        <dl class="about-rows"><dt>Versión</dt><dd id="ver">—</dd><dt>Licencia</dt><dd>Apache-2.0</dd></dl>
+        <dl class="about-rows"><dt>Versión</dt><dd><span id="ver">—</span> · <button type="button" class="linkbtn" id="about-novedades">Qué cambió</button></dd><dt>Licencia</dt><dd>Apache-2.0</dd></dl>
       </div>
     </div>
   </div>
 
-  <script src="./goodunluck-admin.js?v=1" type="module"></script>
+  <script src="./goodunluck-admin.js?v=2" type="module"></script>
 </body>
 </html>

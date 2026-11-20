@@ -1,5 +1,7 @@
 // app.js — UI del standalone de Trustux. Sube el documento a /api/verificar y pinta el
 // veredicto con iconos SVG (sin emojis). La verificación pasa en el servidor local (firma-core).
+import { montarNovedades, avisarNovedades } from "./novedades.js";
+
 const $ = (s) => document.querySelector(s);
 
 // Iconos SVG inline. Heredan color por currentColor desde la clase de estado.
@@ -50,6 +52,7 @@ function montarChrome() {
 
 async function init() {
   montarChrome();
+  montarNovedades();
   const me = await fetch("/api/me").then((r) => r.json()).catch(() => ({ auth: "local", autenticado: true }));
   setVersion(me.version);
   // Federado y sin sesión → mostrar login, ocultar la zona de subida.
@@ -68,6 +71,8 @@ async function init() {
     $("#btn-logout").onclick = () => { location.href = "/logout"; };
   }
   montarDropzone();
+  // Tras una actualización: avisa una vez (por navegador) qué cambió desde la última versión vista.
+  setTimeout(avisarNovedades, 400);
 }
 
 function montarDropzone() {

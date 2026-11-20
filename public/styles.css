@@ -76,3 +76,16 @@ main { max-width: 720px; margin: 0 auto; padding: 8px 24px 16px; }
 
 /* ---- Footer mínimo (la versión vive en "Acerca de", no acá) ---------------- */
 .pie { max-width: 720px; margin: 24px auto; padding: 16px 24px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--border); text-align: center; }
+
+/* ---- Novedades (que cambio en cada version, del CHANGELOG) --------------- */
+.nov-card { width: min(580px, 94vw); max-height: 85vh; overflow: auto; }
+.nov-ver { margin: 16px 0 4px; display: flex; align-items: baseline; gap: 10px; color: var(--text); }
+.nov-ver b { font-family: var(--mono); font-size: 14px; }
+.nov-ver span { color: var(--muted); font-size: 12.5px; font-family: var(--mono); }
+.nov-sec { margin: 8px 0 2px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.nov-list { margin: 2px 0 6px; padding-left: 18px; font-size: 13.5px; line-height: 1.5; }
+.nov-list li { margin: 3px 0; }
+.nov-list strong { color: var(--text); }
+.nov-list code { font-family: var(--mono); font-size: 12px; }
+button.linkbtn, button.linkbtn:hover { background: none; border: none; padding: 0; border-radius: 0; color: var(--accent);
+  cursor: pointer; font: inherit; text-decoration: underline; text-underline-offset: 2px; box-shadow: none; }

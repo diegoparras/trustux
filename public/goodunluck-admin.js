@@ -1,6 +1,7 @@
 // goodunluck-admin.js — Panel del superadmin: matriz rol→capacidad, salvaguardas, cracking y
 // auditoría. Guarda en config/goodunluck.json vía PUT /api/goodunluck/config.
 import { montarChrome, setVersion, montarUsuario, esc } from "./chrome.js";
+import { montarNovedades, avisarNovedades } from "./novedades.js";
 
 const $ = (s) => document.querySelector(s);
 const FORMATOS = ["office", "pdf", "zip", "rar"];
@@ -9,8 +10,10 @@ let cfg = null;
 
 async function init() {
   montarChrome();
+  montarNovedades();
   const me = await fetch("/api/me").then((r) => r.json()).catch(() => ({ auth: "local", autenticado: true }));
   setVersion(me.version); montarUsuario(me);
+  if (me.auth !== "federado" || me.autenticado) setTimeout(avisarNovedades, 400);   // una vez tras una actualización
   cfg = await fetch("/api/goodunluck/estado").then((r) => r.json()).catch(() => null);
   if (!cfg) { $("#admin").innerHTML = `<p class="hint error">No se pudo cargar la configuración.</p>`; return; }
   render();

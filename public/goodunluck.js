@@ -2,6 +2,7 @@
 // propiedad, y según el rol ejecuta la acción; devuelve el archivo desbloqueado como descarga.
 // Todo local (mismo origen). Sin emojis: iconos SVG.
 import { montarChrome, setVersion, montarUsuario, esc } from "./chrome.js";
+import { montarNovedades, avisarNovedades } from "./novedades.js";
 
 const $ = (s) => document.querySelector(s);
 let archivo = null;        // File actual
@@ -47,11 +48,13 @@ function listadoZip(a) {
 
 async function init() {
   montarChrome();
+  montarNovedades();
   const me = await fetch("/api/me").then((r) => r.json()).catch(() => ({ auth: "local", autenticado: true }));
   setVersion(me.version);
   if (me.auth === "federado" && !me.autenticado) { $("#gate-login").classList.remove("hidden"); $("#zona").classList.add("hidden"); return; }
   montarUsuario(me);
   montarDropzone();
+  setTimeout(avisarNovedades, 400);   // una vez por navegador tras una actualización
 }
 
 function montarDropzone() {
